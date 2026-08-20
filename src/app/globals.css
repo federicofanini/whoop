@@ -1,0 +1,224 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens.
+ *
+ * The system is a technical spec sheet: hairline rules instead of shadows,
+ * square corners instead of soft ones, monospace for anything a machine
+ * produced (numbers, labels, metadata) and a tight grotesque for anything a
+ * person wrote. Colour is almost absent from the chrome — ink *is* the accent,
+ * which is why the primary button is simply solid text colour — and is spent
+ * only where it carries information, in the charts.
+ *
+ * Every token is declared for both themes. `data-theme` is stamped onto <html>
+ * by a blocking script before first paint, so nothing here depends on a media
+ * query alone.
+ *
+ * The chart colours were re-picked for this palette and checked against BOTH
+ * grounds, because one set has to work on white and on near-black:
+ *
+ *   slate / terracotta / moss / heather, adjacent pairs ... PASS
+ *   the three scatter-safe slots, all pairs ............... PASS
+ *   every series vs its ground (3:1 graphics minimum) ..... PASS
+ *
+ * Two rules fall out and are enforced in the components:
+ *  1. Heather never shares a scatter plot with slate — the pair collapses under
+ *     protanopia. It is fine on lines and stacks, where marks are separated.
+ *  2. The recovery bands are a red/amber/green ramp and are inherently not
+ *     CVD-separable, so they never carry meaning alone: every use ships with
+ *     the numeric score and a written label.
+ */
+
+@theme {
+  /* Surfaces and text are re-bound per theme below; these are the light values. */
+  --color-plane: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f2;
+  --color-hairline: #dcdcd8;
+  --color-baseline: #b4b4ae;
+
+  --color-ink: #0a0a0a;
+  --color-ink-2: #4b4b47;
+  --color-muted: #86867f;
+
+  /* Categorical series — assigned in fixed order, never cycled. */
+  --color-series-1: #6786c4; /* slate     — strain     */
+  --color-series-2: #4e8f63; /* moss      — recovery   */
+  --color-series-3: #c0623c; /* terracotta— resting HR */
+  --color-series-4: #8579b8; /* heather   — sleep      */
+
+  /* Status — never used as a series colour. */
+  --color-good: #3f8f57;
+  --color-warning: #b5842c;
+  --color-critical: #c0483a;
+
+  /* Sleep stages: one hue, light to dark (ordinal, not categorical). */
+  --color-stage-awake: #b9c6dd;
+  --color-stage-light: #8ea6cc;
+  --color-stage-rem: #6786c4;
+  --color-stage-deep: #47639b;
+
+  --font-sans: var(--font-grotesque), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-monospace), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Square by default. Only pills and the odd active chip round off. */
+  --radius-none: 0px;
+  --radius-chip: 4px;
+  --radius-pill: 999px;
+}
+
+/*
+ * Light is the default so that a first paint with no stored preference — and a
+ * printed page — lands somewhere sane.
+ */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-plane: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f2;
+  --color-hairline: #dcdcd8;
+  --color-baseline: #b4b4ae;
+
+  --color-ink: #0a0a0a;
+  --color-ink-2: #4b4b47;
+  --color-muted: #86867f;
+
+  /* Ink is the accent. On a monochrome page the primary action is simply the
+     one thing that inverts. */
+  --color-accent: #0a0a0a;
+  --color-accent-ink: #ffffff;
+
+  --color-series-1: #6786c4;
+  --color-series-2: #4e8f63;
+  --color-series-3: #c0623c;
+  --color-series-4: #8579b8;
+
+  --color-good: #3f8f57;
+  --color-warning: #b5842c;
+  --color-critical: #c0483a;
+
+  --color-stage-awake: #b9c6dd;
+  --color-stage-light: #8ea6cc;
+  --color-stage-rem: #6786c4;
+  --color-stage-deep: #47639b;
+
+  /* The faint grid behind a chart plot area. */
+  --color-grid: #ecece8;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-plane: #0a0a0a;
+  --color-surface: #101010;
+  --color-surface-2: #171716;
+  --color-hairline: #272725;
+  --color-baseline: #3d3d3a;
+
+  --color-ink: #fafaf8;
+  --color-ink-2: #b5b5ad;
+  --color-muted: #7d7d76;
+
+  --color-accent: #fafaf8;
+  --color-accent-ink: #0a0a0a;
+
+  /* Lifted a step: the same hues, re-weighted so they clear a near-black ground
+     rather than a white one. */
+  --color-series-1: #8aa3d4;
+  --color-series-2: #6aa87d;
+  --color-series-3: #d17a52;
+  --color-series-4: #9d92cc;
+
+  --color-good: #5aa872;
+  --color-warning: #cf9a3c;
+  --color-critical: #d4604f;
+
+  --color-stage-awake: #cbd6e8;
+  --color-stage-light: #a3b6d8;
+  --color-stage-rem: #8aa3d4;
+  --color-stage-deep: #5d78ad;
+
+  --color-grid: #1f1f1e;
+}
+
+html {
+  background-color: var(--color-plane);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--color-plane);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Keeps content clear of the iPhone notch and home indicator in standalone PWA mode. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/*
+ * Headlines are set tight — the size does the work, so the tracking should not
+ * also be shouting.
+ */
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+}
+
+/* Axis ticks and table columns align vertically; hero figures do not. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The eyebrow: monospace, uppercase, widely tracked. Used for section labels,
+ * metric names and anything else that is a caption rather than a sentence.
+ */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* Numbers are machine output, so they are set in the machine face. */
+.numeral {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-hairline);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: var(--color-ink);
+  color: var(--color-plane);
+}
+
+/* A visible, square focus ring — consistent with everything else being square. */
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
