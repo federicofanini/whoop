@@ -44,7 +44,17 @@ function lookup(dict: Dictionary, key: string): string | undefined {
 }
 
 export function createTranslator(locale: Locale): Translator {
-  const dict = getDictionary(locale);
+  return createTranslatorFrom(locale, getDictionary(locale));
+}
+
+/**
+ * Builds a translator from a dictionary that was handed to it.
+ *
+ * The client gets its dictionary as serialised props rather than importing one,
+ * so only the language actually being read is shipped to the browser — importing
+ * `getDictionary` there would bundle both.
+ */
+export function createTranslatorFrom(locale: Locale, dict: Dictionary): Translator {
   const tag = locale === "it" ? "it-IT" : "en-GB";
 
   const number = (value: number, digits?: number) =>

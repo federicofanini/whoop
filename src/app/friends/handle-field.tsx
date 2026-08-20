@@ -21,7 +21,7 @@ export function HandleField({
   return (
     <div className="space-y-3">
       {current ? (
-        <p className="rounded-xl border border-hairline bg-surface-2 px-4 py-3 text-[15px] font-semibold text-ink">
+        <p className="border border-hairline bg-surface-2 px-4 py-3 text-[15px] font-semibold text-ink">
           @{current}
         </p>
       ) : null}
@@ -35,11 +35,11 @@ export function HandleField({
           autoCorrect="off"
           spellCheck={false}
           aria-label={labels.field}
-          className="flex-1 rounded-xl border border-hairline bg-surface-2 px-3.5 py-2.5 text-[14px] text-ink placeholder:text-muted focus:border-baseline focus:outline-none"
+          className="flex-1  border border-hairline bg-surface-2 px-3.5 py-2.5 text-[14px] text-ink placeholder:text-muted focus:border-baseline focus:outline-none"
         />
         <button
           type="submit"
-          className="shrink-0 rounded-xl border border-hairline px-4 py-2.5 text-[14px] font-medium text-ink-2 transition-colors hover:text-ink"
+          className="shrink-0  border border-hairline px-4 py-2.5 text-[14px] font-medium text-ink-2 transition-colors hover:text-ink"
         >
           {labels.rename}
         </button>

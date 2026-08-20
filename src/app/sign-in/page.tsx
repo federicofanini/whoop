@@ -22,7 +22,7 @@ export default async function SignInPage({
       <PageHeader title={t("signIn.title")} description={t("signIn.lead")} />
 
       {params.error ? (
-        <p className="rounded-xl border border-hairline bg-surface-2 p-4 text-[13px] text-critical">
+        <p className="border border-hairline bg-surface-2 p-4 text-[13px] text-critical">
           {t("signIn.error", { message: params.error })}
         </p>
       ) : null}

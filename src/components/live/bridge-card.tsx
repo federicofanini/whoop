@@ -6,6 +6,7 @@ import { createPublisher, transportName, type Publisher } from "@/lib/live/trans
 import type { HeartRateReading } from "@/lib/live/protocol";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n-provider";
 
 /**
  * The publishing half of the live pipeline.
@@ -26,6 +27,7 @@ const STATE_COPY: Record<ConnectionState, { label: string; tone: string }> = {
 };
 
 export function BridgeCard() {
+  const t = useT();
   const [state, setState] = useState<ConnectionState>("idle");
   const [detail, setDetail] = useState<string | null>(null);
   const [battery, setBattery] = useState<number | null>(null);
@@ -88,8 +90,8 @@ export function BridgeCard() {
   return (
     <Panel>
       <PanelHeader
-        title="Heart rate broadcast"
-        subtitle="Turn on Heart Rate Broadcast in the WHOOP app, then connect. Readings stream to every open dashboard."
+        title={t("live.broadcast")}
+        subtitle={t("live.broadcastSub")}
       />
 
       {supported === false ? (
@@ -102,7 +104,7 @@ export function BridgeCard() {
               onClick={connected ? disconnect : connect}
               disabled={state === "requesting" || state === "connecting"}
               className={cn(
-                "rounded-xl px-4 py-2.5 text-[14px] font-semibold transition-colors disabled:opacity-50",
+                " px-4 py-2.5 text-[14px] font-semibold transition-colors disabled:opacity-50",
                 connected
                   ? "border border-hairline bg-surface-2 text-ink hover:bg-hairline"
                   : "bg-ink text-plane hover:bg-ink-2",
@@ -115,7 +117,7 @@ export function BridgeCard() {
               <span
                 aria-hidden
                 className={cn(
-                  "h-2 w-2 rounded-full",
+                  "h-2 w-2",
                   state === "connected"
                     ? "animate-pulse bg-good"
                     : state === "reconnecting"
@@ -139,11 +141,11 @@ export function BridgeCard() {
               </dd>
             </div>
             <div>
-              <dt className="text-muted">Beats relayed</dt>
-              <dd className="mt-1 font-medium tabular text-ink-2">{beats}</dd>
+              <dt className="text-muted">{t("livePage.beatsRelayed")}</dt>
+              <dd className="mt-1 font-medium numeral text-ink-2">{beats}</dd>
             </div>
             <div>
-              <dt className="text-muted">Transport</dt>
+              <dt className="text-muted">{t("livePage.transport")}</dt>
               <dd className="mt-1 font-medium text-ink-2">
                 {transportName() === "supabase" ? "Realtime" : "This browser"}
               </dd>
@@ -151,7 +153,7 @@ export function BridgeCard() {
           </dl>
 
           {transportName() === "local" ? (
-            <p className="mt-4 rounded-xl border border-hairline bg-surface-2 p-3 text-[12px] leading-relaxed text-muted">
+            <p className="mt-4  border border-hairline bg-surface-2 p-3 text-[12px] leading-relaxed text-muted">
               No Realtime credentials set, so readings stay inside this browser — other tabs
               on this Mac will see them, your iPhone will not. Add the Supabase keys from{" "}
               <code className="text-ink-2">.env.example</code> to stream across devices.
@@ -173,20 +175,21 @@ export function BridgeCard() {
  * to wait out. Say so plainly and point at the two things that do work.
  */
 function UnsupportedNotice() {
+  const t = useT();
   return (
-    <div className="rounded-xl border border-hairline bg-surface-2 p-4">
-      <p className="text-[13px] font-medium text-ink">This browser cannot talk to Bluetooth.</p>
+    <div className="border border-hairline bg-surface-2 p-4">
+      <p className="text-[13px] font-medium text-ink">{t("livePage.noBluetooth")}</p>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-2">
         Web Bluetooth is available in Chrome and Edge on macOS. Safari does not implement it on
         any platform, and iOS has no Web Bluetooth at all.
       </p>
       <ul className="mt-3 space-y-1.5 text-[13px] text-ink-2">
         <li>
-          <span className="text-muted">On your Mac —</span> open this page in Chrome and connect
+          <span className="text-muted">{t("livePage.onMac")}</span> open this page in Chrome and connect
           there.
         </li>
         <li>
-          <span className="text-muted">On your iPhone —</span> leave the Mac bridge running; this
+          <span className="text-muted">{t("livePage.onIphone")}</span> leave the Mac bridge running; this
           page will show its stream live.
         </li>
       </ul>

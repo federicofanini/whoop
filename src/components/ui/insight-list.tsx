@@ -3,14 +3,17 @@ import { translateInsight, type Translator } from "@/core/i18n";
 import { status } from "@/lib/theme";
 
 /**
- * Insights carry a tone, and tone is a status role — so each one ships with an
- * icon and a word, never a colour on its own.
+ * Insights carry a tone, and tone is a status role — so each one ships with a
+ * mark and a word, never a colour on its own.
+ *
+ * Rows share edges rather than floating apart: a list of findings is a table of
+ * findings, and reads faster as one.
  */
-const TONE: Record<InsightTone, { color: string; icon: string }> = {
-  positive: { color: status.good, icon: "▲" },
-  neutral: { color: "#898781", icon: "●" },
-  caution: { color: status.warning, icon: "▲" },
-  alert: { color: status.critical, icon: "■" },
+const TONE: Record<InsightTone, { color: string; mark: string }> = {
+  positive: { color: status.good, mark: "▲" },
+  neutral: { color: "var(--color-muted)", mark: "■" },
+  caution: { color: status.warning, mark: "▲" },
+  alert: { color: status.critical, mark: "■" },
 };
 
 export function InsightList({
@@ -29,7 +32,7 @@ export function InsightList({
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="border-t border-hairline">
       {shown.map((insight) => {
         const tone = TONE[insight.tone];
         // The engine emits keys and numbers; the sentence is assembled here, in
@@ -37,21 +40,19 @@ export function InsightList({
         const { title, detail } = translateInsight(t, insight);
 
         return (
-          <li key={insight.id} className="rounded-xl border border-hairline bg-surface-2 p-4">
+          <li key={insight.id} className="border-b border-hairline py-4">
             <div className="flex items-start gap-3">
               <span
                 aria-hidden
-                className="mt-[3px] text-[11px] leading-none"
+                className="mt-[5px] shrink-0 text-[9px] leading-none"
                 style={{ color: tone.color }}
               >
-                {tone.icon}
+                {tone.mark}
               </span>
               <div className="min-w-0">
-                <p className="text-[14px] font-semibold leading-snug text-ink">
+                <p className="flex flex-wrap items-baseline gap-x-2.5 text-[14px] font-medium leading-snug text-ink">
                   {title}
-                  <span className="ml-2 text-[11px] font-medium uppercase tracking-wide text-muted">
-                    {t(`tone.${insight.tone}`)}
-                  </span>
+                  <span className="eyebrow">{t(`tone.${insight.tone}`)}</span>
                 </p>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-ink-2">{detail}</p>
               </div>

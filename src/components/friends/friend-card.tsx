@@ -27,7 +27,7 @@ export function FriendCard({
   const recovery = latest?.recovery ?? null;
 
   return (
-    <article className="rounded-2xl border border-hairline bg-surface p-5">
+    <article className="border border-hairline bg-surface p-5">
       <header className="flex items-center gap-3">
         <Avatar profile={profile} size={44} />
         <div className="min-w-0 flex-1">
@@ -37,7 +37,7 @@ export function FriendCard({
         {recovery !== null ? (
           <div className="shrink-0 text-right">
             <p
-              className="text-[28px] font-semibold leading-none tabular"
+              className="text-[28px] font-semibold leading-none numeral"
               style={{ color: recoveryColor(recovery) }}
             >
               {recovery}
@@ -117,12 +117,12 @@ function Metric({
 }) {
   return (
     <div>
-      <dt className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
-        <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
+      <dt className="flex items-center gap-1.5 eyebrow">
+        <span aria-hidden className="h-2 w-2" style={{ backgroundColor: accent }} />
         {label}
       </dt>
       <dd className="mt-1.5">
-        <span className="text-[17px] font-semibold tabular text-ink">{value}</span>
+        <span className="text-[17px] font-semibold numeral text-ink">{value}</span>
         {sub ? <span className="mt-0.5 block text-[11px] text-muted">{sub}</span> : null}
       </dd>
     </div>

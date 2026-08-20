@@ -81,7 +81,7 @@ export default async function FriendPage({ params }: { params: Promise<{ handle:
       <div className="grid gap-5 lg:grid-cols-[1fr_1.3fr]">
         <Panel className="flex flex-col justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <p className="eyebrow">
               {t("friends.recoveryToday")}
             </p>
             <p className="mt-3 flex items-baseline gap-2">
@@ -94,10 +94,10 @@ export default async function FriendPage({ params }: { params: Promise<{ handle:
               {recovery !== null ? <span className="text-xl font-medium text-ink-2">%</span> : null}
             </p>
             {recovery !== null ? (
-              <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-hairline bg-surface-2 px-3 py-1 text-[12px] font-medium text-ink-2">
+              <p className="mt-3 inline-flex items-center gap-2 border border-hairline px-2.5 py-1 text-[12px] font-medium text-ink-2">
                 <span
                   aria-hidden
-                  className="h-2 w-2 rounded-full"
+                  className="h-2 w-2"
                   style={{ backgroundColor: recoveryColor(recovery) }}
                 />
                 {t(recoveryLabelKey(recovery))}
@@ -231,12 +231,12 @@ function ComparisonTable({
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-hairline">
-            <th className="pb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{t("friends.metric")}</th>
-            <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+            <th className="pb-2 eyebrow">{t("friends.metric")}</th>
+            <th className="pb-2 text-right eyebrow">
               {theirName}
             </th>
-            <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{t("friends.you")}</th>
-            <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{t("friends.diff")}</th>
+            <th className="pb-2 text-right eyebrow">{t("friends.you")}</th>
+            <th className="pb-2 text-right eyebrow">{t("friends.diff")}</th>
           </tr>
         </thead>
         <tbody>
@@ -255,11 +255,11 @@ function ComparisonTable({
             return (
               <tr key={row.label} className="border-b border-hairline last:border-0">
                 <td className="py-3 text-[13px] font-medium text-ink-2">{row.label}</td>
-                <td className="py-3 text-right text-[14px] font-semibold tabular text-ink">
+                <td className="py-3 text-right text-[14px] font-semibold numeral text-ink">
                   {row.theirs !== null ? row.format(row.theirs) : "—"}
                   {row.unit ? <span className="text-[11px] text-muted">{row.unit}</span> : null}
                 </td>
-                <td className="py-3 text-right text-[14px] tabular text-ink-2">
+                <td className="py-3 text-right text-[14px] numeral text-ink-2">
                   {row.mine !== null ? row.format(row.mine) : "—"}
                   {row.unit ? <span className="text-[11px] text-muted">{row.unit}</span> : null}
                 </td>
@@ -295,7 +295,7 @@ function FriendHeader({
       </div>
       <Link
         href="/friends"
-        className="shrink-0 rounded-xl border border-hairline bg-surface px-4 py-2 text-[13px] font-medium text-ink-2 transition-colors hover:text-ink"
+        className="shrink-0  border border-hairline bg-surface px-4 py-2 text-[13px] font-medium text-ink-2 transition-colors hover:text-ink"
       >
         {t("friends.allFriends")}
       </Link>
@@ -306,9 +306,9 @@ function FriendHeader({
 function Vital({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{label}</dt>
+      <dt className="eyebrow">{label}</dt>
       <dd className="mt-1.5">
-        <span className="text-[20px] font-semibold tabular text-ink">{value}</span>
+        <span className="text-[20px] font-semibold numeral text-ink">{value}</span>
         {unit ? <span className="ml-1 text-[12px] text-muted">{unit}</span> : null}
       </dd>
     </div>
@@ -329,9 +329,9 @@ function Tile({
   caption: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-hairline bg-surface p-4 sm:p-5">
+    <div className="relative overflow-hidden  border border-hairline bg-surface p-4 sm:p-5">
       <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ backgroundColor: accent }} />
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</p>
+      <p className="eyebrow">{label}</p>
       <p className="mt-2 flex items-baseline gap-1.5">
         <span className="text-[30px] font-semibold leading-none tracking-tight text-ink">{value}</span>
         {unit ? <span className="text-[13px] font-medium text-ink-2">{unit}</span> : null}

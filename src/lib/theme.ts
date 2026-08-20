@@ -1,49 +1,37 @@
 /**
- * Chart colour roles, mirroring the CSS custom properties in globals.css.
+ * Chart colour roles as CSS custom properties.
  *
- * Recharts needs concrete values in JS rather than `var(--…)` for some props
- * (gradient stops, canvas-drawn marks), so the palette lives here as the single
- * source of truth and globals.css restates it for the CSS side.
+ * Two themes means a colour is no longer a constant, so nothing here is a hex
+ * value any more. Anything rendered as ordinary DOM — a status dot, a bar in
+ * the recovery strip, a hero figure — can take these strings directly and let
+ * the cascade resolve them per theme, including on the server, where the theme
+ * is unknowable.
+ *
+ * Recharts is the exception: some of its props need a concrete value, so client
+ * charts read the same variables through `useChartTokens()`.
  */
-
-export const chart = {
-  surface: "#14161a",
-  plane: "#0a0b0d",
-  hairline: "#23262c",
-  baseline: "#333842",
-  ink: "#ffffff",
-  ink2: "#c3c2b7",
-  muted: "#898781",
-} as const;
 
 /** Categorical slots, in fixed assignment order. Never cycled, never re-ordered. */
 export const series = {
-  strain: "#3987e5",
-  recovery: "#199e70",
-  restingHr: "#d95926",
-  sleep: "#9085e9",
+  strain: "var(--color-series-1)",
+  recovery: "var(--color-series-2)",
+  restingHr: "var(--color-series-3)",
+  sleep: "var(--color-series-4)",
 } as const;
-
-/**
- * Slots that are safe together in an all-pairs form (scatter, bubble), where any
- * two marks can end up side by side. Validated at ΔE 9.4 CVD / 20.9 normal.
- * Violet is deliberately absent: beside blue it measures ΔE 1.9 under protanopia.
- */
-export const scatterSafe = [series.strain, series.recovery, series.restingHr] as const;
 
 /** Status roles. Always shipped with a number and a written label — never colour alone. */
 export const status = {
-  good: "#0ca30c",
-  warning: "#fab219",
-  critical: "#d03b3b",
+  good: "var(--color-good)",
+  warning: "var(--color-warning)",
+  critical: "var(--color-critical)",
 } as const;
 
 /** Sleep stages read as one hue, light → dark. Ordinal, so depth maps to darkness. */
 export const stageColor = {
-  awake: "#9ec5f4",
-  light: "#5598e7",
-  rem: "#256abf",
-  deep: "#184f95",
+  awake: "var(--color-stage-awake)",
+  light: "var(--color-stage-light)",
+  rem: "var(--color-stage-rem)",
+  deep: "var(--color-stage-deep)",
 } as const;
 
 export type RecoveryBand = "green" | "yellow" | "red";
@@ -65,6 +53,7 @@ export function recoveryBand(score: number): RecoveryBand {
   return "red";
 }
 
+/** A `var(--…)` string, so a server-rendered element still tracks the theme. */
 export function recoveryColor(score: number): string {
   const band = recoveryBand(score);
   return band === "green" ? status.good : band === "yellow" ? status.warning : status.critical;
@@ -84,11 +73,11 @@ export function recoveryLabelKey(score: number): "band.primed" | "band.adequate"
  * Zone 1 is the lightest step so the ramp reads as intensity.
  */
 export const hrZones = [
-  { zone: 1, label: "Zone 1", min: 0.5, max: 0.6, color: "#86b6ef" },
-  { zone: 2, label: "Zone 2", min: 0.6, max: 0.7, color: "#5598e7" },
-  { zone: 3, label: "Zone 3", min: 0.7, max: 0.8, color: "#3987e5" },
-  { zone: 4, label: "Zone 4", min: 0.8, max: 0.9, color: "#256abf" },
-  { zone: 5, label: "Zone 5", min: 0.9, max: 1.0, color: "#184f95" },
+  { zone: 1, label: "Zone 1", min: 0.5, max: 0.6, color: "var(--color-stage-awake)" },
+  { zone: 2, label: "Zone 2", min: 0.6, max: 0.7, color: "var(--color-stage-light)" },
+  { zone: 3, label: "Zone 3", min: 0.7, max: 0.8, color: "var(--color-stage-rem)" },
+  { zone: 4, label: "Zone 4", min: 0.8, max: 0.9, color: "var(--color-stage-deep)" },
+  { zone: 5, label: "Zone 5", min: 0.9, max: 1.0, color: "var(--color-series-4)" },
 ] as const;
 
 export function zoneForHr(bpm: number, maxHr: number): (typeof hrZones)[number] | null {

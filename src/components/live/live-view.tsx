@@ -12,12 +12,13 @@ import {
   YAxis,
 } from "recharts";
 import { useLiveHeartRate } from "@/lib/live/use-live-hr";
-import { chart, hrZones, series, zoneForHr } from "@/lib/theme";
+import { hrZones, series, zoneForHr } from "@/lib/theme";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { StatTile } from "@/components/ui/stat";
 import { ZoneDistribution } from "@/components/charts/strain-charts";
 import { TooltipShell, axisProps, chartMargin, gridProps } from "@/components/charts/chart-chrome";
-import { formatDuration } from "@/lib/utils";
+import { useChartTokens } from "@/lib/use-theme-tokens";
+import { useT } from "@/components/i18n-provider";
 import { BridgeCard } from "./bridge-card";
 
 /**
@@ -27,6 +28,8 @@ import { BridgeCard } from "./bridge-card";
  * which is why it works identically on an iPhone that has no Web Bluetooth at all.
  */
 export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: number | null }) {
+  const t = useT();
+  const tokens = useChartTokens();
   const live = useLiveHeartRate(maxHr);
 
   const chartData = useMemo(
@@ -46,10 +49,10 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
       <div className="grid items-start gap-5 lg:grid-cols-[1.6fr_1fr]">
         <Panel className="flex flex-col">
           <PanelHeader
-            title="Live heart rate"
+            title={t("live.heartRate")}
             subtitle={
               live.deviceName
-                ? `Streaming from ${live.deviceName}`
+                ? t("livePage.streamingFrom", { device: live.deviceName })
                 : "Waiting for a broadcast from the bridge"
             }
             action={
@@ -57,7 +60,7 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
                 <button
                   type="button"
                   onClick={live.reset}
-                  className="rounded-lg border border-hairline px-3 py-1.5 text-[12px] font-medium text-muted transition-colors hover:text-ink-2"
+                  className="border border-hairline px-3 py-1.5 text-[12px] font-medium text-muted transition-colors hover:text-ink-2"
                 >
                   Reset session
                 </button>
@@ -70,8 +73,8 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
               <p className="flex items-baseline gap-2">
                 {live.bpm !== null ? (
                   <span
-                    className="text-[72px] font-semibold leading-[0.85] tracking-tight tabular"
-                    style={{ color: currentZone?.color ?? chart.muted }}
+                    className="text-[72px] font-semibold leading-[0.85] tracking-tight numeral"
+                    style={{ color: currentZone?.color ?? tokens.muted }}
                   >
                     {live.bpm}
                   </span>
@@ -85,16 +88,16 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
 
               {/* Zone is a colour on the figure above, so it is also written out here. */}
               <p className="mt-3 flex flex-wrap items-center gap-2 text-[12px]">
-                <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-surface-2 px-3 py-1 font-medium text-ink-2">
+                <span className="inline-flex items-center gap-2 border border-hairline px-2.5 py-1 font-medium text-ink-2">
                   <span
                     aria-hidden
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: currentZone?.color ?? chart.muted }}
+                    className="h-2 w-2"
+                    style={{ backgroundColor: currentZone?.color ?? tokens.muted }}
                   />
                   {currentZone ? `${currentZone.label} · ${Math.round(currentZone.min * 100)}-${Math.round(currentZone.max * 100)}% max` : "Below zone 1"}
                 </span>
                 {live.stale ? (
-                  <span className="rounded-full border border-hairline bg-surface-2 px-3 py-1 font-medium text-warning">
+                  <span className="border border-hairline px-2.5 py-1 font-medium text-warning">
                     Stream paused — no reading for 8s
                   </span>
                 ) : null}
@@ -102,9 +105,9 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
             </div>
 
             <dl className="grid grid-cols-3 gap-x-6 gap-y-1 text-right">
-              <Metric label="Avg" value={live.avgBpm} />
-              <Metric label="Peak" value={live.maxBpm} />
-              <Metric label="Low" value={live.minBpm} />
+              <Metric label={t("live.avg")} value={live.avgBpm} />
+              <Metric label={t("live.peak")} value={live.maxBpm} />
+              <Metric label={t("live.low")} value={live.minBpm} />
             </dl>
           </div>
 
@@ -122,10 +125,10 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
                       </linearGradient>
                     </defs>
 
-                    <CartesianGrid {...gridProps} />
+                    <CartesianGrid {...gridProps(tokens)} />
                     <XAxis
                       dataKey="at"
-                      {...axisProps}
+                      {...axisProps(tokens)}
                       type="number"
                       domain={["dataMin", "dataMax"]}
                       tickFormatter={(value: number) =>
@@ -134,7 +137,7 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
                       minTickGap={40}
                     />
                     <YAxis
-                      {...axisProps}
+                      {...axisProps(tokens)}
                       width={34}
                       domain={[
                         (min: number) => Math.max(40, Math.floor((min - 8) / 10) * 10),
@@ -147,19 +150,19 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
                       <ReferenceLine
                         key={zone.zone}
                         y={Math.round(zone.min * maxHr)}
-                        stroke={chart.hairline}
+                        stroke={tokens.hairline}
                         strokeWidth={1}
                       />
                     ))}
                     {restingHr ? (
                       <ReferenceLine
                         y={restingHr}
-                        stroke={chart.baseline}
+                        stroke={tokens.hairline}
                         strokeWidth={1}
                         label={{
                           value: "Resting",
                           position: "insideTopLeft",
-                          fill: chart.muted,
+                          fill: tokens.muted,
                           fontSize: 10,
                         }}
                       />
@@ -172,11 +175,11 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
                       fill="url(#hrFill)"
                       isAnimationActive={false}
                       dot={false}
-                      activeDot={{ r: 4, strokeWidth: 2, stroke: chart.surface }}
+                      activeDot={{ r: 4, strokeWidth: 2, stroke: tokens.surface }}
                     />
 
                     <Tooltip
-                      cursor={{ stroke: chart.baseline, strokeWidth: 1 }}
+                      cursor={{ stroke: tokens.hairline, strokeWidth: 1 }}
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
                         const point = payload[0].payload as { at: number; bpm: number };
@@ -205,30 +208,30 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
 
           <Panel>
             <PanelHeader
-              title="Session"
-              subtitle="Accumulated since the first reading arrived."
+              title={t("live.session")}
+              subtitle={t("live.sessionSub")}
             />
             <div className="grid grid-cols-2 gap-3">
               <StatTile
-                label="Elapsed"
-                value={formatDuration(live.elapsedSeconds * 1000)}
+                label={t("live.elapsed")}
+                value={t.duration(live.elapsedSeconds * 1000)}
                 caption={`${live.samples.length} readings`}
               />
               <StatTile
-                label="Est. strain"
+                label={t("live.estStrain")}
                 value={live.estimatedStrain.toFixed(1)}
                 accent={series.strain}
                 caption="Approximation — WHOOP's own score lands after the session."
               />
               <StatTile
-                label="Live HRV"
+                label={t("live.liveHrv")}
                 value={live.liveHrv ? live.liveHrv.toFixed(0) : "—"}
                 unit="ms"
                 accent={series.recovery}
                 caption="RMSSD over 2 minutes of RR intervals."
               />
               <StatTile
-                label="SDNN"
+                label={t("live.sdnn")}
                 value={live.liveSdnn ? live.liveSdnn.toFixed(0) : "—"}
                 unit="ms"
                 caption="Slower-moving companion to RMSSD."
@@ -246,8 +249,8 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
 
       <Panel>
         <PanelHeader
-          title="Time in zone"
-          subtitle={`Zones are shares of your ${maxHr} bpm maximum. Higher zones cost disproportionately more strain.`}
+          title={t("live.timeInZone")}
+          subtitle={t("live.zonesSub", { maxHr })}
         />
         <ZoneDistribution zoneSeconds={live.zoneSeconds} maxHr={maxHr} />
       </Panel>
@@ -258,12 +261,12 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
 function Metric({ label, value }: { label: string; value: number | null }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{label}</dt>
+      <dt className="eyebrow">{label}</dt>
       <dd
         className={
           value === null
             ? "mt-1 text-[18px] font-semibold text-hairline"
-            : "mt-1 text-[18px] font-semibold tabular text-ink-2"
+            : "mt-1 text-[18px] font-semibold numeral text-ink-2"
         }
       >
         {value ?? "···"}
@@ -273,9 +276,10 @@ function Metric({ label, value }: { label: string; value: number | null }) {
 }
 
 function WaitingState() {
+  const t = useT();
   return (
-    <div className="flex h-[340px] flex-col items-center justify-center rounded-xl border border-dashed border-hairline text-center">
-      <p className="text-[14px] font-medium text-ink-2">No broadcast yet</p>
+    <div className="flex h-[340px] flex-col items-center justify-center  border border-dashed border-hairline text-center">
+      <p className="text-[14px] font-medium text-ink-2">{t("livePage.noBroadcast")}</p>
       <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-muted">
         Open the WHOOP app, turn on Heart Rate Broadcast, then connect the bridge. The trace
         starts the moment the first beat lands.

@@ -15,7 +15,7 @@ export function IncomingRequestRow({
   labels: { wants: string; approve: string; decline: string };
 }) {
   return (
-    <li className="flex flex-wrap items-center gap-3 rounded-xl border border-hairline bg-surface-2 p-4">
+    <li className="flex flex-wrap items-center gap-3  border border-hairline bg-surface-2 p-4">
       <Avatar profile={request.profile} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] font-medium text-ink">{displayName(request.profile)}</p>
@@ -29,7 +29,7 @@ export function IncomingRequestRow({
           <input type="hidden" name="id" value={request.id} />
           <button
             type="submit"
-            className="rounded-lg bg-ink px-3.5 py-2 text-[13px] font-semibold text-plane transition-opacity hover:opacity-90"
+            className="bg-ink px-3.5 py-2 text-[13px] font-semibold text-plane transition-opacity hover:opacity-90"
           >
             {labels.approve}
           </button>
@@ -38,7 +38,7 @@ export function IncomingRequestRow({
           <input type="hidden" name="id" value={request.id} />
           <button
             type="submit"
-            className="rounded-lg border border-hairline px-3.5 py-2 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
+            className="border border-hairline px-3.5 py-2 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
           >
             {labels.decline}
           </button>
@@ -56,7 +56,7 @@ export function OutgoingRequestRow({
   labels: { waiting: string; withdraw: string };
 }) {
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-hairline bg-surface-2 p-4">
+    <li className="flex items-center gap-3  border border-hairline bg-surface-2 p-4">
       <Avatar profile={request.profile} muted />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] font-medium text-ink-2">@{request.profile.handle}</p>
@@ -66,7 +66,7 @@ export function OutgoingRequestRow({
         <input type="hidden" name="id" value={request.id} />
         <button
           type="submit"
-          className="shrink-0 rounded-lg border border-hairline px-3.5 py-2 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
+          className="shrink-0  border border-hairline px-3.5 py-2 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
         >
           {labels.withdraw}
         </button>

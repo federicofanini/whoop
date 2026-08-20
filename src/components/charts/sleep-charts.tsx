@@ -18,9 +18,10 @@ import {
   ZAxis,
 } from "recharts";
 import type { SleepNight } from "@/core/analytics/sleep";
-import { formatDuration } from "@/lib/utils";
-import { chart, recoveryColor, stageColor } from "@/lib/theme";
+import { recoveryColor, stageColor } from "@/lib/theme";
 import { Legend, TooltipShell, axisProps, chartMargin, gridProps, weekdayDate } from "./chart-chrome";
+import { useChartTokens } from "@/lib/use-theme-tokens";
+import { useT } from "@/components/i18n-provider";
 
 const HOUR = 3_600_000;
 
@@ -32,6 +33,8 @@ const HOUR = 3_600_000;
  * which is one fewer thing for the reader to memorise.
  */
 export function SleepStagesChart({ nights, height = 280 }: { nights: SleepNight[]; height?: number }) {
+  const t = useT();
+  const tokens = useChartTokens();
   const data = nights.map((night) => ({
     date: night.date,
     awake: night.stages.awake / HOUR,
@@ -48,15 +51,15 @@ export function SleepStagesChart({ nights, height = 280 }: { nights: SleepNight[
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={chartMargin} barCategoryGap="20%">
-            <CartesianGrid {...gridProps} />
+            <CartesianGrid {...gridProps(tokens)} />
             <XAxis
               dataKey="date"
-              {...axisProps}
+              {...axisProps(tokens)}
               tickFormatter={(v: string) => weekdayDate(v).replace(/^\w+, /, "")}
               minTickGap={24}
             />
             <YAxis
-              {...axisProps}
+              {...axisProps(tokens)}
               width={34}
               tickFormatter={(v: number) => `${v}h`}
               domain={[0, (max: number) => Math.ceil(max + 1)]}
@@ -67,14 +70,14 @@ export function SleepStagesChart({ nights, height = 280 }: { nights: SleepNight[
               you want readable against the axis. A 2px surface-coloured stroke
               renders as a gap between segments rather than as a border on them.
             */}
-            <Bar dataKey="deep" stackId="sleep" fill={stageColor.deep} stroke={chart.surface} strokeWidth={2} isAnimationActive={false} />
-            <Bar dataKey="rem" stackId="sleep" fill={stageColor.rem} stroke={chart.surface} strokeWidth={2} isAnimationActive={false} />
-            <Bar dataKey="light" stackId="sleep" fill={stageColor.light} stroke={chart.surface} strokeWidth={2} isAnimationActive={false} />
+            <Bar dataKey="deep" stackId="sleep" fill={stageColor.deep} stroke={tokens.surface} strokeWidth={2} isAnimationActive={false} />
+            <Bar dataKey="rem" stackId="sleep" fill={stageColor.rem} stroke={tokens.surface} strokeWidth={2} isAnimationActive={false} />
+            <Bar dataKey="light" stackId="sleep" fill={stageColor.light} stroke={tokens.surface} strokeWidth={2} isAnimationActive={false} />
             <Bar
               dataKey="awake"
               stackId="sleep"
               fill={stageColor.awake}
-              stroke={chart.surface}
+              stroke={tokens.surface}
               strokeWidth={2}
               radius={[4, 4, 0, 0]}
               isAnimationActive={false}
@@ -83,7 +86,7 @@ export function SleepStagesChart({ nights, height = 280 }: { nights: SleepNight[
             <Line
               type="stepAfter"
               dataKey="need"
-              stroke={chart.ink2}
+              stroke={tokens.ink2}
               strokeWidth={1.5}
               dot={false}
               isAnimationActive={false}
@@ -99,16 +102,16 @@ export function SleepStagesChart({ nights, height = 280 }: { nights: SleepNight[
                   <TooltipShell
                     title={weekdayDate(point.date)}
                     rows={[
-                      { label: "Deep", value: formatDuration(point.deep * HOUR), color: stageColor.deep },
-                      { label: "REM", value: formatDuration(point.rem * HOUR), color: stageColor.rem },
-                      { label: "Light", value: formatDuration(point.light * HOUR), color: stageColor.light },
-                      { label: "Awake", value: formatDuration(point.awake * HOUR), color: stageColor.awake },
-                      { label: "Needed", value: formatDuration(point.need * HOUR), color: chart.ink2 },
+                      { label: t("sleepPage.deep"), value: t.duration(point.deep * HOUR), color: stageColor.deep },
+                      { label: t("sleepPage.rem"), value: t.duration(point.rem * HOUR), color: stageColor.rem },
+                      { label: t("sleepPage.light"), value: t.duration(point.light * HOUR), color: stageColor.light },
+                      { label: t("sleepPage.awake"), value: t.duration(point.awake * HOUR), color: stageColor.awake },
+                      { label: t("sleepPage.needed"), value: t.duration(point.need * HOUR), color: tokens.ink2 },
                     ]}
                     footer={
                       shortfall > 0
-                        ? `${formatDuration(shortfall * HOUR)} short of need · ${point.performance ?? "—"}% performance`
-                        : `Need met · ${point.performance ?? "—"}% performance`
+                        ? t("sleepPage.shortOfNeed", { amount: t.duration(shortfall * HOUR), performance: point.performance ?? "—" })
+                        : t("sleepPage.needMet", { performance: point.performance ?? "—" })
                     }
                   />
                 );
@@ -124,7 +127,7 @@ export function SleepStagesChart({ nights, height = 280 }: { nights: SleepNight[
           { label: "REM", color: stageColor.rem, shape: "square" },
           { label: "Light", color: stageColor.light, shape: "square" },
           { label: "Awake", color: stageColor.awake, shape: "square" },
-          { label: "Sleep needed", color: chart.ink2, shape: "line" },
+          { label: "Sleep needed", color: tokens.ink2, shape: "line" },
         ]}
       />
     </div>
@@ -133,6 +136,8 @@ export function SleepStagesChart({ nights, height = 280 }: { nights: SleepNight[
 
 /** Nightly shortfall against need. One measure, one axis, zero baseline. */
 export function SleepDebtChart({ nights, height = 200 }: { nights: SleepNight[]; height?: number }) {
+  const t = useT();
+  const tokens = useChartTokens();
   const data = nights.map((night) => ({
     date: night.date,
     shortfallHours: night.shortfallMilli / HOUR,
@@ -144,15 +149,15 @@ export function SleepDebtChart({ nights, height = 200 }: { nights: SleepNight[];
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={chartMargin} barCategoryGap="20%">
-            <CartesianGrid {...gridProps} />
+            <CartesianGrid {...gridProps(tokens)} />
             <XAxis
               dataKey="date"
-              {...axisProps}
+              {...axisProps(tokens)}
               tickFormatter={(v: string) => weekdayDate(v).replace(/^\w+, /, "")}
               minTickGap={24}
             />
-            <YAxis {...axisProps} width={34} tickFormatter={(v: number) => `${v.toFixed(1)}h`} />
-            <ReferenceLine y={0} stroke={chart.baseline} strokeWidth={1} />
+            <YAxis {...axisProps(tokens)} width={34} tickFormatter={(v: number) => `${v.toFixed(1)}h`} />
+            <ReferenceLine y={0} stroke={tokens.hairline} strokeWidth={1} />
 
             <Bar dataKey="shortfallHours" radius={[4, 4, 0, 0]} isAnimationActive={false}>
               {data.map((point) => (
@@ -174,7 +179,7 @@ export function SleepDebtChart({ nights, height = 200 }: { nights: SleepNight[];
                     rows={[
                       {
                         label: "Short of need",
-                        value: point.shortfallHours > 0 ? formatDuration(point.shortfallHours * HOUR) : "None",
+                        value: point.shortfallHours > 0 ? t.duration(point.shortfallHours * HOUR) : t("sleepPage.none"),
                       },
                     ]}
                     footer={
@@ -197,6 +202,7 @@ export function SleepDebtChart({ nights, height = 200 }: { nights: SleepNight[];
 
 /** Bedtime regularity. Consistency is the most controllable input to sleep quality. */
 export function BedtimeConsistencyChart({ nights, height = 220 }: { nights: SleepNight[]; height?: number }) {
+  const tokens = useChartTokens();
   const data = nights.map((night) => ({
     date: night.date,
     // Minutes past noon, so an 11pm and a 1am bedtime plot two hours apart.
@@ -224,15 +230,15 @@ export function BedtimeConsistencyChart({ nights, height = 220 }: { nights: Slee
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={chartMargin}>
-            <CartesianGrid {...gridProps} />
+            <CartesianGrid {...gridProps(tokens)} />
             <XAxis
               dataKey="date"
-              {...axisProps}
+              {...axisProps(tokens)}
               tickFormatter={(v: string) => weekdayDate(v).replace(/^\w+, /, "")}
               minTickGap={24}
             />
             <YAxis
-              {...axisProps}
+              {...axisProps(tokens)}
               width={58}
               domain={[lo, hi]}
               ticks={ticks}
@@ -261,7 +267,7 @@ export function BedtimeConsistencyChart({ nights, height = 220 }: { nights: Slee
             />
 
             <Tooltip
-              cursor={{ stroke: chart.baseline, strokeWidth: 1 }}
+              cursor={{ stroke: tokens.hairline, strokeWidth: 1 }}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 const point = payload[0].payload as (typeof data)[number];
@@ -305,6 +311,7 @@ export function SleepRecoveryScatter({
   r: number;
   height?: number;
 }) {
+  const tokens = useChartTokens();
   // Least-squares fit, drawn only when the correlation is strong enough to mean something.
   const n = points.length;
   const meanX = points.reduce((a, p) => a + p.performance, 0) / (n || 1);
@@ -332,18 +339,18 @@ export function SleepRecoveryScatter({
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ ...chartMargin, bottom: 16, left: 8 }}>
-            <CartesianGrid {...gridProps} vertical />
+            <CartesianGrid {...gridProps(tokens)} vertical />
             <XAxis
               type="number"
               dataKey="performance"
               domain={[xMin, xMax]}
               unit="%"
-              {...axisProps}
+              {...axisProps(tokens)}
               label={{
                 value: "Sleep performance",
                 position: "insideBottom",
                 offset: -10,
-                fill: chart.muted,
+                fill: tokens.muted,
                 fontSize: 11,
               }}
             />
@@ -353,12 +360,12 @@ export function SleepRecoveryScatter({
               domain={[0, 100]}
               width={34}
               unit="%"
-              {...axisProps}
+              {...axisProps(tokens)}
               label={{
                 value: "Recovery",
                 angle: -90,
                 position: "insideLeft",
-                fill: chart.muted,
+                fill: tokens.muted,
                 fontSize: 11,
               }}
             />
@@ -370,18 +377,18 @@ export function SleepRecoveryScatter({
                   key={point.date}
                   fill={recoveryColor(point.recovery)}
                   fillOpacity={0.8}
-                  stroke={chart.surface}
+                  stroke={tokens.surface}
                   strokeWidth={2}
                 />
               ))}
             </Scatter>
 
             {Math.abs(r) > 0.25 ? (
-              <Scatter data={fit} line={{ stroke: chart.ink2, strokeWidth: 2 }} shape={() => <g />} isAnimationActive={false} />
+              <Scatter data={fit} line={{ stroke: tokens.ink2, strokeWidth: 2 }} shape={() => <g />} isAnimationActive={false} />
             ) : null}
 
             <Tooltip
-              cursor={{ stroke: chart.baseline }}
+              cursor={{ stroke: tokens.hairline }}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const point = payload[0].payload as (typeof points)[number];
@@ -406,7 +413,7 @@ export function SleepRecoveryScatter({
       </div>
 
       <Legend
-        items={[{ label: "Trend", color: chart.ink2, shape: "line" }]}
+        items={[{ label: "Trend", color: tokens.ink2, shape: "line" }]}
         note={`One dot per night · r = ${r.toFixed(2)}`}
       />
     </div>

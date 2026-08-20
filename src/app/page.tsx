@@ -41,7 +41,7 @@ export default async function OverviewPage() {
     <div className="space-y-5">
       <div className="mb-1 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+          <p className="eyebrow">
             {t.date(new Date(), { weekday: "long", day: "numeric", month: "long" })}
           </p>
           <h1 className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-[28px]">
@@ -50,7 +50,7 @@ export default async function OverviewPage() {
         </div>
         <Link
           href="/live"
-          className="rounded-xl border border-hairline bg-surface px-4 py-2 text-[13px] font-medium text-ink-2 transition-colors hover:text-ink"
+          className="border border-hairline bg-surface px-4 py-2 text-[13px] font-medium text-ink-2 transition-colors hover:text-ink"
         >
           {t("overview.liveSession")}
         </Link>
@@ -210,9 +210,9 @@ function Vital({
 
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{label}</dt>
+      <dt className="eyebrow">{label}</dt>
       <dd className="mt-1.5">
-        <span className="text-[20px] font-semibold tabular text-ink">{value}</span>
+        <span className="text-[20px] font-semibold numeral text-ink">{value}</span>
         <span className="ml-1 text-[12px] text-muted">{unit}</span>
         {delta !== null && Math.abs(delta) >= 0.5 ? (
           <span className={`ml-2 text-[12px] font-medium tabular ${isGood ? "text-good" : "text-critical"}`}>
@@ -226,7 +226,7 @@ function Vital({
 
 function DemoNotice({ t }: { t: Translator }) {
   return (
-    <div className="rounded-2xl border border-hairline bg-surface p-4">
+    <div className="border border-hairline bg-surface p-4">
       <p className="text-[13px] leading-relaxed text-ink-2">
         <span className="font-semibold text-ink">{t("overview.demoTitle")}</span>{" "}
         {t("overview.demoBody")}{" "}

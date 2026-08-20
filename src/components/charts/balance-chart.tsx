@@ -19,8 +19,10 @@ import {
 } from "recharts";
 import type { BalancePoint } from "@/core/analytics/load";
 import { optimalStrain } from "@/core/analytics/load";
-import { chart, recoveryBand, recoveryColor, series, type BandLabels } from "@/lib/theme";
+import { recoveryBand, recoveryColor, series, type BandLabels } from "@/lib/theme";
 import { Legend, TooltipShell, axisProps, chartMargin, gridProps, weekdayDate } from "./chart-chrome";
+import { useChartTokens } from "@/lib/use-theme-tokens";
+import { useT } from "@/components/i18n-provider";
 
 /**
  * Strain against recovery, as a scatter rather than two lines on two y-scales.
@@ -39,6 +41,8 @@ export function BalanceScatter({
   bandLabels: BandLabels;
   height?: number;
 }) {
+  const t = useT();
+  const tokens = useChartTokens();
   // The target band, sampled across the recovery range and drawn as a guide.
   const band = Array.from({ length: 51 }, (_, i) => {
     const recovery = i * 2;
@@ -51,7 +55,7 @@ export function BalanceScatter({
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ ...chartMargin, bottom: 16, left: 8 }}>
-            <CartesianGrid {...gridProps} vertical />
+            <CartesianGrid {...gridProps(tokens)} vertical />
 
             <XAxis
               type="number"
@@ -60,12 +64,12 @@ export function BalanceScatter({
               domain={[0, 100]}
               ticks={[0, 25, 50, 75, 100]}
               unit="%"
-              {...axisProps}
+              {...axisProps(tokens)}
               label={{
                 value: "Recovery",
                 position: "insideBottom",
                 offset: -10,
-                fill: chart.muted,
+                fill: tokens.muted,
                 fontSize: 11,
               }}
             />
@@ -76,12 +80,12 @@ export function BalanceScatter({
               domain={[0, 21]}
               ticks={[0, 7, 14, 21]}
               width={34}
-              {...axisProps}
+              {...axisProps(tokens)}
               label={{
                 value: "Strain",
                 angle: -90,
                 position: "insideLeft",
-                fill: chart.muted,
+                fill: tokens.muted,
                 fontSize: 11,
               }}
             />
@@ -109,14 +113,14 @@ export function BalanceScatter({
                   fill={recoveryColor(point.recovery)}
                   fillOpacity={0.85}
                   // A 2px surface ring separates overlapping marks without a contrasting border.
-                  stroke={chart.surface}
+                  stroke={tokens.surface}
                   strokeWidth={2}
                 />
               ))}
             </Scatter>
 
             <Tooltip
-              cursor={{ strokeDasharray: "0", stroke: chart.baseline }}
+              cursor={{ strokeDasharray: "0", stroke: tokens.hairline }}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const point = payload[0].payload as BalancePoint;
@@ -124,9 +128,9 @@ export function BalanceScatter({
                   <TooltipShell
                     title={weekdayDate(point.date)}
                     rows={[
-                      { label: "Recovery", value: `${point.recovery}%`, color: recoveryColor(point.recovery) },
-                      { label: "Strain", value: point.strain.toFixed(1), color: series.strain },
-                      { label: "Supported", value: point.target.toFixed(1) },
+                      { label: t("chart.recovery"), value: `${point.recovery}%`, color: recoveryColor(point.recovery) },
+                      { label: t("chart.strain"), value: point.strain.toFixed(1), color: series.strain },
+                      { label: t("chart.supported"), value: point.target.toFixed(1) },
                     ]}
                     footer={
                       point.verdict === "over"
@@ -145,12 +149,12 @@ export function BalanceScatter({
 
       <Legend
         items={[
-          { label: "Primed (67%+)", color: "#0ca30c" },
-          { label: "Adequate (34-66%)", color: "#fab219" },
-          { label: "Compromised (<34%)", color: "#d03b3b" },
-          { label: "Supported strain range", color: `${series.recovery}40`, shape: "square" },
+          { label: t("chart.primedBand"), color: "#0ca30c" },
+          { label: t("chart.adequateBand"), color: "#fab219" },
+          { label: t("chart.compromisedBand"), color: "#d03b3b" },
+          { label: t("chart.supportedRange"), color: `${series.recovery}40`, shape: "square" },
         ]}
-        note="Each dot is one day"
+        note={t("chart.eachDot")}
       />
     </div>
   );
@@ -163,20 +167,22 @@ export function BalanceScatter({
  * above the line, cool below, neutral at zero: a proper diverging encoding.
  */
 export function DeviationBars({ points, height = 200 }: { points: BalancePoint[]; height?: number }) {
+  const t = useT();
+  const tokens = useChartTokens();
   return (
     <div>
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={points} margin={chartMargin} barCategoryGap="18%">
-            <CartesianGrid {...gridProps} />
+            <CartesianGrid {...gridProps(tokens)} />
             <XAxis
               dataKey="date"
-              {...axisProps}
+              {...axisProps(tokens)}
               tickFormatter={(v: string) => weekdayDate(v).replace(/^\w+, /, "")}
               minTickGap={28}
             />
-            <YAxis {...axisProps} width={34} tickFormatter={(v: number) => (v > 0 ? `+${v}` : String(v))} />
-            <ReferenceLine y={0} stroke={chart.baseline} strokeWidth={1} />
+            <YAxis {...axisProps(tokens)} width={34} tickFormatter={(v: number) => (v > 0 ? `+${v}` : String(v))} />
+            <ReferenceLine y={0} stroke={tokens.hairline} strokeWidth={1} />
 
             <Bar dataKey="deviation" radius={[3, 3, 0, 0]} isAnimationActive={false}>
               {points.map((point) => (
@@ -197,10 +203,10 @@ export function DeviationBars({ points, height = 200 }: { points: BalancePoint[]
                   <TooltipShell
                     title={weekdayDate(point.date)}
                     rows={[
-                      { label: "Strain", value: point.strain.toFixed(1) },
-                      { label: "Supported", value: point.target.toFixed(1) },
+                      { label: t("chart.strain"), value: point.strain.toFixed(1) },
+                      { label: t("chart.supported"), value: point.target.toFixed(1) },
                       {
-                        label: "Deviation",
+                        label: t("chart.deviation"),
                         value: `${point.deviation > 0 ? "+" : ""}${point.deviation.toFixed(1)}`,
                       },
                     ]}
@@ -221,10 +227,10 @@ export function DeviationBars({ points, height = 200 }: { points: BalancePoint[]
 
       <Legend
         items={[
-          { label: "Above supported strain", color: series.restingHr, shape: "square" },
-          { label: "Below supported strain", color: series.strain, shape: "square" },
+          { label: t("chart.aboveSupported"), color: series.restingHr, shape: "square" },
+          { label: t("chart.belowSupported"), color: series.strain, shape: "square" },
         ]}
-        note="Faded bars sit inside the supported range"
+        note={t("chart.fadedInRange")}
       />
     </div>
   );
@@ -238,19 +244,21 @@ export function LoadChart({
   data: { date: string; acute: number | null; chronic: number | null }[];
   height?: number;
 }) {
+  const t = useT();
+  const tokens = useChartTokens();
   return (
     <div>
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={chartMargin}>
-            <CartesianGrid {...gridProps} />
+            <CartesianGrid {...gridProps(tokens)} />
             <XAxis
               dataKey="date"
-              {...axisProps}
+              {...axisProps(tokens)}
               tickFormatter={(v: string) => weekdayDate(v).replace(/^\w+, /, "")}
               minTickGap={28}
             />
-            <YAxis {...axisProps} width={30} />
+            <YAxis {...axisProps(tokens)} width={30} />
 
             <Line
               type="monotone"
@@ -272,7 +280,7 @@ export function LoadChart({
             />
 
             <Tooltip
-              cursor={{ stroke: chart.baseline, strokeWidth: 1 }}
+              cursor={{ stroke: tokens.hairline, strokeWidth: 1 }}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 const point = payload[0].payload as (typeof data)[number];
@@ -283,12 +291,12 @@ export function LoadChart({
                     title={weekdayDate(String(label))}
                     rows={[
                       {
-                        label: "Acute (7d)",
+                        label: t("chart.acute"),
                         value: point.acute?.toFixed(1) ?? "—",
                         color: series.strain,
                       },
                       {
-                        label: "Chronic (28d)",
+                        label: t("chart.chronic"),
                         value: point.chronic?.toFixed(1) ?? "—",
                         color: series.restingHr,
                       },
@@ -304,8 +312,8 @@ export function LoadChart({
 
       <Legend
         items={[
-          { label: "Acute load (7-day)", color: series.strain, shape: "line" },
-          { label: "Chronic load (28-day)", color: series.restingHr, shape: "line" },
+          { label: t("chart.acuteLoad"), color: series.strain, shape: "line" },
+          { label: t("chart.chronicLoad"), color: series.restingHr, shape: "line" },
         ]}
       />
     </div>

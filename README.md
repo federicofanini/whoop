@@ -181,14 +181,56 @@ Two things fall out of doing this properly:
 `it.ts` is typed against `en.ts`, so a missing translation is a compile error
 rather than an English word appearing mid-sentence in production.
 
+## The design system
+
+Modelled on router.com: a technical spec sheet rather than a dashboard.
+
+- **Hairline rules instead of shadows, square corners instead of soft ones.**
+  Content is separated the way a table separates it — nothing floats at a
+  different elevation. One radius survives, on the segmented nav control, where
+  a hard-edged fill behind text reads as a button rather than a tab.
+- **Two faces doing two jobs.** A tight grotesque (Inter) for anything a person
+  wrote; monospace (IBM Plex Mono) for anything a machine produced — every
+  number, axis tick, eyebrow label and piece of metadata. That split is the
+  whole typographic idea.
+- **Ink is the accent.** There is no brand colour in the chrome: the primary
+  action is simply the one element that inverts. Colour is spent only where it
+  carries information, in the charts.
+
+Both themes are declared token-for-token in `globals.css`, and `data-theme` is
+stamped onto `<html>` by a blocking inline script before first paint — a
+dashboard that flashes white for one frame on every load is worse than one with
+no light mode at all.
+
+The chart palette was re-picked for this system and checked against **both**
+grounds, because one set of colours has to work on white and on near-black:
+
+| | |
+|---|---|
+| slate / terracotta / moss / heather, adjacent pairs | PASS |
+| the three scatter-safe slots, all pairs | PASS |
+| every series against its own ground (3:1 graphics minimum) | PASS |
+
+Two rules fall out and are enforced in the components: heather never shares a
+scatter plot with slate (the pair collapses under protanopia), and the
+recovery bands never carry meaning alone, since a red/amber/green ramp is not
+CVD-separable — every use ships with the score and a written label.
+
+Most coloured elements are plain `var(--…)` strings, so they follow the theme
+without knowing what it is, including on the server. Recharts is the exception —
+some of its props need a concrete value — so client charts resolve the same
+variables through `useChartTokens()`, which re-reads them when `data-theme`
+changes.
+
 ## Stack
 
 - **Next.js 15** (App Router) + React 19 + TypeScript
-- **Tailwind v4** with a dark design system
+- **Tailwind v4** with a light/dark token system
 - **Recharts** for the analytical charts
 - **Drizzle ORM** + Postgres for synced history and the friend graph
 - **Supabase Auth** for Google sign-in, **Supabase Realtime** for the live stream
 - **No i18n library** — a typed dictionary and `Intl` cover two languages
+- **Inter + IBM Plex Mono** via `next/font`, self-hosted, no runtime request
 - **Supabase Realtime** broadcast channels for the live heart-rate stream
 - **Web Bluetooth** for the HR bridge, with a `BroadcastChannel` fallback for local use
 

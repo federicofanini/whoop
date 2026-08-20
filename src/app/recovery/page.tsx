@@ -32,81 +32,81 @@ export default async function RecoveryPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Recovery"
-        title="HRV and resting heart rate, against your own baseline"
-        description="Population HRV norms span an order of magnitude, so they tell you nothing. What matters is where today sits inside your own distribution — which is what the shaded band shows."
+        eyebrow={t("nav.recovery")}
+        title={t("recoveryPage.title")}
+        description={t("recoveryPage.lead")}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
-          label="HRV"
+          label={t("overview.hrv")}
           value={baselines.hrv.latest?.toFixed(0) ?? "—"}
-          unit="ms"
+          unit={t("common.ms")}
           accent={series.recovery}
           delta={
             baselines.hrv.latest !== null && baselines.hrv.baseline !== null
               ? baselines.hrv.latest - baselines.hrv.baseline
               : undefined
           }
-          deltaLabel="vs baseline"
+          deltaLabel={t("recoveryPage.vsBaseline")}
           deltaGood
           caption={`${baselines.hrv.z >= 0 ? "+" : ""}${baselines.hrv.z.toFixed(1)} SD · baseline ${baselines.hrv.baseline?.toFixed(0) ?? "—"}ms`}
         />
         <StatTile
-          label="Resting HR"
+          label={t("overview.restingHr")}
           value={baselines.restingHr.latest?.toFixed(0) ?? "—"}
-          unit="bpm"
+          unit={t("common.bpm")}
           accent={series.restingHr}
           delta={
             baselines.restingHr.latest !== null && baselines.restingHr.baseline !== null
               ? baselines.restingHr.latest - baselines.restingHr.baseline
               : undefined
           }
-          deltaLabel="vs baseline"
+          deltaLabel={t("recoveryPage.vsBaseline")}
           deltaGood={false}
           caption={`${baselines.restingHr.z >= 0 ? "+" : ""}${baselines.restingHr.z.toFixed(1)} SD · baseline ${baselines.restingHr.baseline?.toFixed(0) ?? "—"}bpm`}
         />
         <StatTile
-          label="Green days"
+          label={t("recoveryPage.greenDays")}
           value={green}
-          unit="/ 30"
+          unit={t("recoveryPage.outOf30")}
           accent={status.good}
-          caption="Recovery at or above 67%"
+          caption={t("recoveryPage.greenCaption")}
         />
         <StatTile
-          label="Red days"
+          label={t("recoveryPage.redDays")}
           value={red}
-          unit="/ 30"
+          unit={t("recoveryPage.outOf30")}
           accent={status.critical}
-          caption="Recovery below 34%"
+          caption={t("recoveryPage.redCaption")}
         />
       </div>
 
       {insights.length > 0 ? (
         <Panel>
-          <PanelHeader title="Recovery signals" subtitle="Only what departs from your normal range." />
+          <PanelHeader title={t("recoveryPage.signals")} subtitle={t("recoveryPage.signalsSub")} />
           <InsightList insights={insights} t={t} />
         </Panel>
       ) : null}
 
       <Panel>
         <PanelHeader
-          title="Heart rate variability"
-          subtitle="90 days. The band is ±1 standard deviation around a trailing 30-day mean — inside it is noise, outside it is signal."
+          title={t("recoveryPage.hrvTitle")}
+          subtitle={t("recoveryPage.hrvSub")}
         />
-        <BaselineChart points={hrvPoints} color={series.recovery} unit="ms" label="HRV" height={280} />
+        <BaselineChart points={hrvPoints} color={series.recovery} unit={t("common.ms")} label={t("overview.hrv")} height={280} />
       </Panel>
 
       <Panel>
         <PanelHeader
-          title="Resting heart rate"
-          subtitle="Rising RHR alongside falling HRV is the pattern worth acting on — either alone is usually noise."
+          title={t("recoveryPage.rhrTitle")}
+          subtitle={t("recoveryPage.rhrSub")}
         />
-        <BaselineChart points={rhrPoints} color={series.restingHr} unit=" bpm" label="Resting HR" height={280} />
+        <BaselineChart points={rhrPoints} color={series.restingHr} unit={` ${t("common.bpm")}`} label={t("overview.restingHr")} height={280} />
       </Panel>
 
       <Panel>
-        <PanelHeader title="Daily recovery score" subtitle="Last 60 days." />
+        <PanelHeader title={t("recoveryPage.dailyTitle")} subtitle={t("recoveryPage.dailySub")} />
         <RecoveryBars days={days.slice(-60)} bandLabels={bandLabels} height={240} />
       </Panel>
     </div>

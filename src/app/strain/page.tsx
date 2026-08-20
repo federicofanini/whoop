@@ -40,30 +40,30 @@ export default async function StrainPage() {
   });
 
   const zoneCopy = {
-    productive: "Adding stimulus at a rate your base absorbs",
-    overreaching: "Acute load has spiked ahead of your base",
-    detraining: "Acute load has fallen below your base",
+    productive: t("strainPage.zoneProductive"),
+    overreaching: t("strainPage.zoneOverreaching"),
+    detraining: t("strainPage.zoneDetraining"),
   } as const;
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Strain"
-        title="Is your training matched to what your body is offering?"
-        description="Strain and recovery are on different scales, so they are never plotted on one pair of axes here — a dual-axis version of this chart invents a relationship. Instead: one measure per axis, and a deviation series that has a real zero."
+        eyebrow={t("nav.strain")}
+        title={t("strainPage.title")}
+        description={t("strainPage.lead")}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
-          label="Today's strain"
+          label={t("strainPage.today")}
           value={today?.strain?.toFixed(1) ?? "—"}
           accent={series.strain}
-          caption={target ? `Supported range ${target.low.toFixed(1)}–${target.high.toFixed(1)}` : undefined}
+          caption={target ? t("strainPage.supportedRange", { low: target.low, high: target.high }) : undefined}
         />
         <StatTile
-          label="Acute : chronic"
+          label={t("strainPage.acuteChronic")}
           value={load.ratio.toFixed(2)}
-          unit="×"
+          unit={t("common.times")}
           accent={
             load.zone === "overreaching"
               ? status.critical
@@ -74,25 +74,27 @@ export default async function StrainPage() {
           caption={zoneCopy[load.zone]}
         />
         <StatTile
-          label="This week"
+          label={t("strainPage.thisWeek")}
           value={load.weeklyStrain.toFixed(0)}
           accent={series.strain}
           delta={load.weeklyStrain - load.weeklyStrainPrior}
-          deltaLabel="vs last week"
-          caption="Total strain across 7 days"
+          deltaLabel={t("strainPage.vsLastWeek")}
+          caption={t("strainPage.weekCaption")}
         />
         <StatTile
-          label="Days over recovery"
+          label={t("strainPage.daysOver")}
           value={balance.over}
           unit={`/ ${balance.points.length}`}
           accent={series.restingHr}
-          caption={`Mean deviation ${balance.meanDeviation >= 0 ? "+" : ""}${balance.meanDeviation.toFixed(1)} strain`}
+          caption={t("strainPage.meanDeviation", {
+            value: `${balance.meanDeviation >= 0 ? "+" : "−"}${t.number(Math.abs(balance.meanDeviation), 1)}`,
+          })}
         />
       </div>
 
       {insights.length > 0 ? (
         <Panel>
-          <PanelHeader title="Load signals" subtitle="Where your training is running relative to your capacity." />
+          <PanelHeader title={t("strainPage.signals")} subtitle={t("strainPage.signalsSub")} />
           <InsightList insights={insights} t={t} />
         </Panel>
       ) : null}
@@ -100,16 +102,16 @@ export default async function StrainPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel>
           <PanelHeader
-            title="Strain against recovery"
-            subtitle="Every dot is a day. The shaded diagonal is the strain each recovery level supports — dots above it are days you outran your recovery."
+            title={t("strainPage.scatterTitle")}
+            subtitle={t("strainPage.scatterSub")}
           />
           <BalanceScatter points={balance.points} bandLabels={bandLabels} />
         </Panel>
 
         <Panel>
           <PanelHeader
-            title="Daily deviation"
-            subtitle="Strain minus what that day's recovery supported. One measure, so one axis, with a real zero."
+            title={t("strainPage.deviationTitle")}
+            subtitle={t("strainPage.deviationSub")}
           />
           <DeviationBars points={balance.points.slice(-30)} height={300} />
         </Panel>
@@ -117,14 +119,14 @@ export default async function StrainPage() {
 
       <Panel>
         <PanelHeader
-          title="Acute and chronic load"
-          subtitle="Both are exponentially weighted strain in the same units, so they legitimately share an axis. Their ratio is the number that matters: 0.80–1.30 is the productive band."
+          title={t("strainPage.loadTitle")}
+          subtitle={t("strainPage.loadSub")}
         />
         <LoadChart data={loadSeries} height={260} />
       </Panel>
 
       <Panel>
-        <PanelHeader title="Daily strain" subtitle="Last 60 days." />
+        <PanelHeader title={t("strainPage.dailyTitle")} subtitle={t("strainPage.dailySub")} />
         <StrainBars days={days.slice(-60)} height={240} />
       </Panel>
     </div>

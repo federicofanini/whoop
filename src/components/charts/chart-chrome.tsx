@@ -1,28 +1,36 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { chart } from "@/lib/theme";
+import type { ChartTokens } from "@/lib/use-theme-tokens";
 
 /**
  * Shared chart chrome.
  *
  * Grid and axes are solid hairlines one shade off the surface — recessive, never
- * dashed. Everything here exists so every chart in the app reads as one system
- * rather than seven separate charts that happen to share a page.
+ * dashed, matching the rules that separate everything else on the page. Axis
+ * ticks are set in the monospace face because they are machine output, which is
+ * the same reason the numbers in the tooltips are.
+ *
+ * These are functions rather than constants because a colour is no longer a
+ * constant: the same chart has to draw on white and on near-black.
  */
 
-export const axisProps = {
-  stroke: chart.baseline,
-  tick: { fill: chart.muted, fontSize: 11 },
-  tickLine: false,
-  axisLine: false,
-} as const;
+export function axisProps(tokens: ChartTokens) {
+  return {
+    stroke: tokens.hairline,
+    tick: { fill: tokens.muted, fontSize: 11, fontFamily: "var(--font-mono)" },
+    tickLine: false,
+    axisLine: false,
+  } as const;
+}
 
-export const gridProps = {
-  stroke: chart.hairline,
-  strokeDasharray: "0",
-  vertical: false,
-} as const;
+export function gridProps(tokens: ChartTokens) {
+  return {
+    stroke: tokens.grid,
+    strokeDasharray: "0",
+    vertical: false,
+  } as const;
+}
 
 /** Consistent margins mean the plot areas of stacked charts line up down the page. */
 export const chartMargin = { top: 8, right: 12, bottom: 4, left: 4 } as const;
@@ -33,12 +41,18 @@ export interface TooltipRow {
   color?: string;
 }
 
-export function TooltipShell({ title, rows, footer }: { title: string; rows: TooltipRow[]; footer?: ReactNode }) {
+export function TooltipShell({
+  title,
+  rows,
+  footer,
+}: {
+  title: string;
+  rows: TooltipRow[];
+  footer?: ReactNode;
+}) {
   return (
-    <div className="pointer-events-none rounded-xl border border-hairline bg-surface-2/95 px-3 py-2.5 shadow-xl backdrop-blur">
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
-        {title}
-      </p>
+    <div className="pointer-events-none border border-hairline bg-surface px-3 py-2.5">
+      <p className="eyebrow mb-2">{title}</p>
       <div className="space-y-1">
         {rows.map((row) => (
           <div key={row.label} className="flex items-center justify-between gap-6 text-[12px]">
@@ -46,18 +60,20 @@ export function TooltipShell({ title, rows, footer }: { title: string; rows: Too
               {row.color ? (
                 <span
                   aria-hidden
-                  className="h-2 w-2 shrink-0 rounded-full"
+                  className="h-2 w-2 shrink-0"
                   style={{ backgroundColor: row.color }}
                 />
               ) : null}
               {row.label}
             </span>
             {/* Values wear text tokens, never the series colour. */}
-            <span className="tabular font-medium text-ink">{row.value}</span>
+            <span className="numeral text-[12px] font-medium text-ink">{row.value}</span>
           </div>
         ))}
       </div>
-      {footer ? <div className="mt-2 border-t border-hairline pt-2 text-[11px] text-muted">{footer}</div> : null}
+      {footer ? (
+        <div className="mt-2 border-t border-hairline pt-2 text-[11px] text-muted">{footer}</div>
+      ) : null}
     </div>
   );
 }
@@ -76,13 +92,7 @@ export function Legend({
         <span key={item.label} className="flex items-center gap-1.5 text-[12px] text-ink-2">
           <span
             aria-hidden
-            className={
-              item.shape === "line"
-                ? "h-[2px] w-4 rounded-full"
-                : item.shape === "square"
-                  ? "h-2.5 w-2.5 rounded-[2px]"
-                  : "h-2.5 w-2.5 rounded-full"
-            }
+            className={item.shape === "line" ? "h-[2px] w-4" : "h-2.5 w-2.5"}
             style={{ backgroundColor: item.color }}
           />
           {item.label}

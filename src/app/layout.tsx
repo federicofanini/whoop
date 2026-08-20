@@ -1,11 +1,38 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, IBM_Plex_Mono } from "next/font/google";
 import { AppNav } from "@/components/ui/nav";
 import { getViewer } from "@/server/auth";
 import { getLocale, getTranslator } from "@/server/locale";
 import { loadFriendGraph } from "@/core/friends/queries";
 import { loadViewerDashboard } from "@/server/dashboard";
 import { ThemeScript } from "@/components/ui/theme-script";
+import { I18nProvider } from "@/components/i18n-provider";
+import { getDictionary } from "@/core/i18n";
 import "./globals.css";
+
+/*
+ * Two faces, doing two jobs.
+ *
+ * Inter is the closest widely-available neo-grotesque to the tight, low-contrast
+ * sans this design calls for, and it is set with `-0.02em` tracking on headings
+ * to match. IBM Plex Mono carries every number, label and piece of metadata —
+ * the split is the whole typographic idea, so it is worth a second file.
+ *
+ * next/font self-hosts both, so there is no request to Google at runtime and no
+ * layout shift while a webfont arrives.
+ */
+const grotesque = Inter({
+  subsets: ["latin"],
+  variable: "--font-grotesque",
+  display: "swap",
+});
+
+const monospace = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-monospace",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Strap — WHOOP dashboard",
@@ -36,43 +63,28 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const pending = graph?.incoming.length ?? 0;
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html
+      lang={locale}
+      className={`${grotesque.variable} ${monospace.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <ThemeScript />
       </head>
       <body className="min-h-dvh antialiased">
-        <AppNav
-          demo={user.demo}
-          locale={locale}
-          handle={viewer?.handle ?? null}
-          signedIn={Boolean(viewer)}
-          pendingRequests={pending}
-          labels={{
-            overview: t("nav.overview"),
-            recovery: t("nav.recovery"),
-            strain: t("nav.strain"),
-            sleep: t("nav.sleep"),
-            friends: t("nav.friends"),
-            live: t("nav.live"),
-            settings: t("nav.settings"),
-            signIn: t("nav.signIn"),
-            demoBadge: t("nav.demoBadge"),
-            demoTitle: t("nav.demoTitle"),
-            theme: t("nav.theme"),
-            themeLight: t("nav.themeLight"),
-            themeDark: t("nav.themeDark"),
-            themeSystem: t("nav.themeSystem"),
-            language: t("nav.language"),
-            pendingLabel:
-              pending === 1
-                ? t("nav.pendingRequests", { count: pending })
-                : t("nav.pendingRequests_plural", { count: pending }),
-          }}
-        />
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
-        <footer className="mx-auto max-w-7xl px-4 pb-10 pt-4 sm:px-6">
-          <p className="text-[12px] text-muted">{t("app.tagline")}</p>
-        </footer>
+        <I18nProvider locale={locale} dict={getDictionary(locale)}>
+          <AppNav
+            demo={user.demo}
+            locale={locale}
+            handle={viewer?.handle ?? null}
+            signedIn={Boolean(viewer)}
+            pendingRequests={pending}
+          />
+          <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+          <footer className="mx-auto max-w-7xl px-4 pb-10 pt-4 sm:px-6">
+            <p className="text-[12px] text-muted">{t("app.tagline")}</p>
+          </footer>
+        </I18nProvider>
       </body>
     </html>
   );

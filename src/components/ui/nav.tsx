@@ -6,70 +6,54 @@ import { cn } from "@/lib/utils";
 import { LOCALES, type Locale } from "@/core/i18n/config";
 import { setLocale } from "@/app/actions/locale";
 import { ThemeToggle } from "./theme-toggle";
+import { useT } from "@/components/i18n-provider";
 
-export interface NavLabels {
-  overview: string;
-  recovery: string;
-  strain: string;
-  sleep: string;
-  friends: string;
-  live: string;
-  settings: string;
-  signIn: string;
-  demoBadge: string;
-  demoTitle: string;
-  theme: string;
-  themeLight: string;
-  themeDark: string;
-  themeSystem: string;
-  language: string;
-  /**
-   * Already pluralised by the server. A function cannot cross into a Client
-   * Component — it is not serialisable — and the count is known at render time
-   * anyway, so there is nothing for the client to decide.
-   */
-  pendingLabel: string;
-}
-
+/**
+ * The header is a single hairline rule with everything sitting on it.
+ *
+ * The section links use the segmented-control treatment: the active one takes a
+ * soft fill and full ink, the rest stay muted. It is the one place a small
+ * radius is allowed, because a filled square behind text at this size reads as
+ * a button rather than a tab.
+ */
 export function AppNav({
   demo,
   locale,
   handle,
   signedIn,
   pendingRequests = 0,
-  labels,
 }: {
   demo: boolean;
   locale: Locale;
   handle: string | null;
   signedIn: boolean;
   pendingRequests?: number;
-  labels: NavLabels;
 }) {
   const pathname = usePathname();
+  const t = useT();
 
   const links = [
-    { href: "/", label: labels.overview },
-    { href: "/recovery", label: labels.recovery },
-    { href: "/strain", label: labels.strain },
-    { href: "/sleep", label: labels.sleep },
-    { href: "/friends", label: labels.friends },
-    { href: "/live", label: labels.live },
+    { href: "/", label: t("nav.overview") },
+    { href: "/recovery", label: t("nav.recovery") },
+    { href: "/strain", label: t("nav.strain") },
+    { href: "/sleep", label: t("nav.sleep") },
+    { href: "/friends", label: t("nav.friends") },
+    { href: "/live", label: t("nav.live") },
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-hairline bg-plane/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-hairline bg-plane/90 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex h-14 items-center justify-between gap-4">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <span aria-hidden className="h-6 w-6 rounded-md bg-gradient-to-br from-series-1 to-series-2" />
-            <span className="text-[15px] font-semibold tracking-tight">Strap</span>
+          <Link href="/" className="flex shrink-0 items-baseline gap-1.5">
+            <span className="text-[17px] font-semibold tracking-[-0.03em] text-ink">strap</span>
+            <span className="eyebrow hidden text-[9px] sm:inline">whoop</span>
           </Link>
 
           {/* Horizontally scrollable so the nav never wraps on an iPhone. */}
           <nav
             aria-label="Primary"
-            className="-mx-2 flex flex-1 items-center gap-1 overflow-x-auto px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="-mx-2 flex flex-1 items-center gap-0.5 overflow-x-auto px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {links.map((link) => {
               const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
@@ -80,15 +64,21 @@ export function AppNav({
                   href={link.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors",
-                    active ? "bg-surface-2 text-ink" : "text-muted hover:text-ink-2",
+                    "shrink-0 rounded-[4px] px-2.5 py-1.5 text-[13px] transition-colors",
+                    active
+                      ? "bg-surface-2 font-medium text-ink"
+                      : "text-muted hover:text-ink-2",
                   )}
                 >
                   {link.label}
                   {badge > 0 ? (
                     <span
-                      className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-series-1 px-1 text-[11px] font-semibold text-plane"
-                      aria-label={labels.pendingLabel}
+                      className="numeral ml-1.5 inline-flex h-[17px] min-w-[17px] items-center justify-center bg-[var(--color-accent)] px-1 text-[10px] font-medium text-[var(--color-accent-ink)]"
+                      aria-label={
+                        badge === 1
+                          ? t("nav.pendingRequests", { count: badge })
+                          : t("nav.pendingRequests_plural", { count: badge })
+                      }
                     >
                       {badge}
                     </span>
@@ -99,44 +89,34 @@ export function AppNav({
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
-            <LocaleSwitcher locale={locale} label={labels.language} />
-            <ThemeToggle
-              label={labels.theme}
-              labels={{
-                light: labels.themeLight,
-                dark: labels.themeDark,
-                system: labels.themeSystem,
-              }}
-            />
-
             {demo ? (
-              <span
-                className="hidden rounded-full border border-hairline bg-surface px-2.5 py-1 text-[11px] font-medium text-muted sm:inline"
-                title={labels.demoTitle}
-              >
-                {labels.demoBadge}
+              <span className="eyebrow hidden border border-hairline px-2 py-1 md:inline" title={t("nav.demoTitle")}>
+                {t("nav.demoBadge")}
               </span>
             ) : null}
+
+            <LocaleSwitcher locale={locale} label={t("nav.language")} />
+            <ThemeToggle />
 
             {signedIn ? (
               <Link
                 href="/settings"
                 className={cn(
-                  "rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors",
+                  "rounded-[4px] px-2.5 py-1.5 text-[13px] transition-colors",
                   pathname.startsWith("/settings")
-                    ? "bg-surface-2 text-ink"
+                    ? "bg-surface-2 font-medium text-ink"
                     : "text-muted hover:text-ink-2",
                 )}
                 title={handle ? `@${handle}` : undefined}
               >
-                {labels.settings}
+                {t("nav.settings")}
               </Link>
             ) : (
               <Link
                 href="/sign-in"
-                className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
+                className="bg-[var(--color-accent)] px-3 py-1.5 text-[13px] font-medium text-[var(--color-accent-ink)] transition-opacity hover:opacity-90"
               >
-                {labels.signIn}
+                {t("nav.signIn")}
               </Link>
             )}
           </div>
@@ -153,7 +133,7 @@ export function AppNav({
  */
 function LocaleSwitcher({ locale, label }: { locale: Locale; label: string }) {
   return (
-    <form action={setLocale} className="hidden items-center rounded-lg border border-hairline sm:flex">
+    <form action={setLocale} className="flex items-center border border-hairline">
       {LOCALES.map((code) => (
         <button
           key={code}
@@ -163,7 +143,7 @@ function LocaleSwitcher({ locale, label }: { locale: Locale; label: string }) {
           aria-label={`${label}: ${code.toUpperCase()}`}
           aria-current={code === locale ? "true" : undefined}
           className={cn(
-            "px-2 py-1 text-[11px] font-semibold uppercase transition-colors first:rounded-l-md last:rounded-r-md",
+            "px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors",
             code === locale ? "bg-surface-2 text-ink" : "text-muted hover:text-ink-2",
           )}
         >

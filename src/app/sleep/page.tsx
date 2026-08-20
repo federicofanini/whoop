@@ -12,7 +12,6 @@ import {
   SleepStagesChart,
 } from "@/components/charts/sleep-charts";
 import { series, stageColor, status } from "@/lib/theme";
-import { formatDuration } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +27,15 @@ export default async function SleepPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Sleep"
-        title="Debt, architecture, and what actually moves your recovery"
-        description="Total time in bed is the least interesting number here. What predicts recovery is the restorative fraction, the regularity of your schedule, and whether you are clearing the need your body has already accumulated."
+        eyebrow={t("nav.sleep")}
+        title={t("sleepPage.title")}
+        description={t("sleepPage.lead")}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
-          label="Sleep debt"
-          value={formatDuration(sleep.debtMilli)}
+          label={t("overview.sleepDebt")}
+          value={t.duration(sleep.debtMilli)}
           accent={
             sleep.debtMilli > 6 * 3_600_000
               ? status.critical
@@ -44,41 +43,41 @@ export default async function SleepPage() {
                 ? status.warning
                 : status.good
           }
-          caption="Shortfall accumulated over 7 nights"
+          caption={t("sleepPage.debtCaption")}
         />
         <StatTile
-          label="Average asleep"
-          value={formatDuration(sleep.avgAsleepMilli)}
+          label={t("sleepPage.avgAsleep")}
+          value={t.duration(sleep.avgAsleepMilli)}
           accent={series.sleep}
-          caption={`Against a need of ${formatDuration(sleep.avgNeedMilli)}`}
+          caption={t("sleepPage.againstNeed", { need: { duration: sleep.avgNeedMilli } })}
         />
         <StatTile
-          label="Restorative share"
+          label={t("sleepPage.restorative")}
           value={(sleep.restorativeShare * 100).toFixed(0)}
-          unit="%"
+          unit={t("common.percent")}
           accent={stageColor.deep}
-          caption="REM plus deep, as a share of total sleep. Typical is 40–50%."
+          caption={t("sleepPage.restorativeCaption")}
         />
         <StatTile
-          label="Bedtime spread"
+          label={t("sleepPage.spread")}
           value={`±${Math.round(sleep.bedtimeVariabilityMin)}`}
           unit="min"
           accent={consistencyGood ? status.good : status.warning}
-          caption={consistencyGood ? "Genuinely regular" : "Under ±30 minutes is the target"}
+          caption={consistencyGood ? t("sleepPage.genuinelyRegular") : t("sleepPage.spreadCaption")}
         />
       </div>
 
       {insights.length > 0 ? (
         <Panel>
-          <PanelHeader title="Sleep signals" subtitle="Where your nights are helping or costing you." />
+          <PanelHeader title={t("sleepPage.signals")} subtitle={t("sleepPage.signalsSub")} />
           <InsightList insights={insights} t={t} />
         </Panel>
       ) : null}
 
       <Panel>
         <PanelHeader
-          title="Sleep architecture"
-          subtitle="Stages stack deepest-first and share one hue — depth reads as darkness. The stepped line is what WHOOP calculated you needed that night."
+          title={t("sleepPage.architecture")}
+          subtitle={t("sleepPage.architectureSub")}
         />
         <SleepStagesChart nights={sleep.nights.slice(-21)} height={300} />
       </Panel>
@@ -86,16 +85,16 @@ export default async function SleepPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel>
           <PanelHeader
-            title="Nightly shortfall"
-            subtitle="How far each night fell short of its need. Debt compounds — it is not cleared by one long lie-in."
+            title={t("sleepPage.shortfall")}
+            subtitle={t("sleepPage.shortfallSub")}
           />
           <SleepDebtChart nights={sleep.nights.slice(-21)} height={240} />
         </Panel>
 
         <Panel>
           <PanelHeader
-            title="Schedule regularity"
-            subtitle="Consistency is the most controllable input to sleep quality, and usually buys more than extra time in bed."
+            title={t("sleepPage.regularity")}
+            subtitle={t("sleepPage.regularitySub")}
           />
           <BedtimeConsistencyChart nights={sleep.nights.slice(-21)} height={240} />
         </Panel>
@@ -103,10 +102,14 @@ export default async function SleepPage() {
 
       <Panel>
         <PanelHeader
-          title="Does sleep actually drive your recovery?"
+          title={t("sleepPage.correlation")}
           subtitle={
             correlation.n >= 14
-              ? `Correlation of ${correlation.r.toFixed(2)} across ${correlation.n} nights — sleep performance explains about ${(correlation.r ** 2 * 100).toFixed(0)}% of the variation in your recovery score.`
+              ? t("sleepPage.correlationDetail", {
+                  r: Number(correlation.r.toFixed(2)),
+                  nights: correlation.n,
+                  variance: Number((correlation.r ** 2 * 100).toFixed(0)),
+                })
               : "Needs a couple more weeks of nights before the relationship means anything."
           }
         />

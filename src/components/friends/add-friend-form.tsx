@@ -45,7 +45,7 @@ export function AddFriendForm({
             autoCorrect="off"
             spellCheck={false}
             aria-label={labels.field}
-            className="w-full rounded-xl border border-hairline bg-surface-2 py-2.5 pl-7 pr-3.5 text-[14px] text-ink placeholder:text-muted focus:border-baseline focus:outline-none"
+            className="w-full  border border-hairline bg-surface-2 py-2.5 pl-7 pr-3.5 text-[14px] text-ink placeholder:text-muted focus:border-baseline focus:outline-none"
           />
         </div>
         <SubmitButton send={labels.send} sending={labels.sending} />
@@ -71,7 +71,7 @@ function SubmitButton({ send, sending }: { send: string; sending: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="shrink-0 rounded-xl bg-ink px-5 py-2.5 text-[14px] font-semibold text-plane transition-opacity hover:opacity-90 disabled:opacity-50"
+      className="shrink-0  bg-ink px-5 py-2.5 text-[14px] font-semibold text-plane transition-opacity hover:opacity-90 disabled:opacity-50"
     >
       {pending ? sending : send}
     </button>

@@ -41,7 +41,7 @@ export function SyncControls() {
         type="button"
         onClick={() => run("incremental")}
         disabled={busy !== null}
-        className="rounded-xl border border-hairline bg-surface-2 px-4 py-2.5 text-[14px] font-medium text-ink transition-colors hover:bg-hairline disabled:opacity-50"
+        className="border border-hairline bg-surface-2 px-4 py-2.5 text-[14px] font-medium text-ink transition-colors hover:bg-hairline disabled:opacity-50"
       >
         {busy === "incremental" ? "Syncing…" : "Sync now"}
       </button>
@@ -49,7 +49,7 @@ export function SyncControls() {
         type="button"
         onClick={() => run("backfill")}
         disabled={busy !== null}
-        className="rounded-xl border border-hairline bg-surface-2 px-4 py-2.5 text-[14px] font-medium text-ink transition-colors hover:bg-hairline disabled:opacity-50"
+        className="border border-hairline bg-surface-2 px-4 py-2.5 text-[14px] font-medium text-ink transition-colors hover:bg-hairline disabled:opacity-50"
       >
         {busy === "backfill" ? "Backfilling…" : "Backfill history"}
       </button>

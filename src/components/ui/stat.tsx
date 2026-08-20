@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { formatDelta } from "@/lib/utils";
 
 /**
  * A stat tile is the right form when the answer is one number. Reaching for a
- * chart to show a single value is the most common way a dashboard misses its point.
+ * chart to show a single value is the most common way a dashboard misses its
+ * point.
+ *
+ * The label is monospace and the value is monospace, because both are machine
+ * output; only the caption, which is written by a person, is set in the sans.
  */
 export function StatTile({
   label,
@@ -20,7 +23,7 @@ export function StatTile({
   value: string | number;
   unit?: string;
   caption?: string;
-  /** A colour bar, never the only carrier of meaning — the value and caption say it too. */
+  /** A hairline tick in the series colour. Never the only carrier of meaning. */
   accent?: string;
   delta?: number;
   deltaLabel?: string;
@@ -31,39 +34,35 @@ export function StatTile({
   const deltaIsGood = deltaGood === undefined ? deltaPositive : deltaPositive === deltaGood;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-hairline bg-surface p-4 sm:p-5">
-      {accent ? (
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-[3px]"
-          style={{ backgroundColor: accent }}
-        />
-      ) : null}
+    <div className="border border-hairline bg-surface p-4 sm:p-5">
+      <p className="eyebrow flex items-center gap-2">
+        {accent ? (
+          <span aria-hidden className="h-2 w-2 shrink-0" style={{ backgroundColor: accent }} />
+        ) : null}
+        {label}
+      </p>
 
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</p>
-
-      <p className="mt-2 flex items-baseline gap-1.5">
-        <span className="text-[30px] font-semibold leading-none tracking-tight text-ink">
-          {value}
-        </span>
-        {unit ? <span className="text-[13px] font-medium text-ink-2">{unit}</span> : null}
+      <p className="mt-3 flex items-baseline gap-1.5">
+        <span className="numeral text-[28px] font-medium leading-none text-ink">{value}</span>
+        {unit ? <span className="numeral text-[13px] text-muted">{unit}</span> : null}
       </p>
 
       {typeof delta === "number" ? (
         <p
           className={cn(
-            "mt-2 text-[12px] font-medium tabular",
+            "numeral mt-2 text-[12px]",
             deltaIsGood ? "text-good" : "text-critical",
           )}
         >
           {/* Arrow plus sign plus text: never colour alone. */}
           <span aria-hidden>{deltaPositive ? "▲" : "▼"} </span>
-          {formatDelta(delta, Math.abs(delta) < 10 ? 1 : 0)}
+          {deltaPositive ? "+" : "−"}
+          {Math.abs(Number(delta.toFixed(Math.abs(delta) < 10 ? 1 : 0)))}
           {deltaLabel ? <span className="text-muted"> {deltaLabel}</span> : null}
         </p>
       ) : null}
 
-      {caption ? <p className="mt-2 text-[12px] leading-relaxed text-muted">{caption}</p> : null}
+      {caption ? <p className="mt-2.5 text-[12px] leading-relaxed text-muted">{caption}</p> : null}
     </div>
   );
 }
@@ -87,21 +86,21 @@ export function HeroFigure({
 }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</p>
-      <p className="mt-3 flex items-baseline gap-2">
+      <p className="eyebrow">{label}</p>
+      <p className="mt-4 flex items-baseline gap-2">
         <span
-          className="text-[64px] font-semibold leading-[0.9] tracking-tight sm:text-[76px]"
+          className="numeral text-[64px] font-medium leading-[0.85] tracking-[-0.03em] sm:text-[76px]"
           style={{ color: color ?? undefined }}
         >
           {value}
         </span>
-        {unit ? <span className="text-xl font-medium text-ink-2">{unit}</span> : null}
+        {unit ? <span className="numeral text-lg text-muted">{unit}</span> : null}
       </p>
       {status ? (
-        <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-hairline bg-surface-2 px-3 py-1 text-[12px] font-medium text-ink-2">
+        <p className="mt-4 inline-flex items-center gap-2 border border-hairline px-2.5 py-1 text-[12px] font-medium text-ink-2">
           <span
             aria-hidden
-            className="h-2 w-2 rounded-full"
+            className="h-2 w-2"
             style={{ backgroundColor: color ?? "currentColor" }}
           />
           {status}

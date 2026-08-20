@@ -67,14 +67,14 @@ export default async function SettingsPage({
           <div className="mt-5 flex flex-wrap gap-3">
             <a
               href="/api/auth/whoop"
-              className="rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-plane transition-colors hover:bg-ink-2"
+              className="bg-ink px-4 py-2.5 text-[14px] font-semibold text-plane transition-colors hover:bg-ink-2"
             >
               {linked ? t("settings.reconnect") : t("settings.connect")}
             </a>
             <SyncControls />
           </div>
         ) : (
-          <p className="mt-5 rounded-xl border border-hairline bg-surface-2 p-4 text-[13px] leading-relaxed text-ink-2">
+          <p className="mt-5  border border-hairline bg-surface-2 p-4 text-[13px] leading-relaxed text-ink-2">
             {t("settings.envHint")}
           </p>
         )}
@@ -101,7 +101,7 @@ export default async function SettingsPage({
             <form action="/auth/sign-out" method="post">
               <button
                 type="submit"
-                className="rounded-xl border border-hairline px-4 py-2.5 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
+                className="border border-hairline px-4 py-2.5 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
               >
                 {t("nav.signOut")}
               </button>
@@ -134,7 +134,7 @@ export default async function SettingsPage({
         </p>
         <Link
           href="/live"
-          className="mt-4 inline-block rounded-xl border border-hairline bg-surface-2 px-4 py-2.5 text-[13px] font-medium text-ink transition-colors hover:bg-hairline"
+          className="mt-4 inline-block  border border-hairline bg-surface-2 px-4 py-2.5 text-[13px] font-medium text-ink transition-colors hover:bg-hairline"
         >
           Open the live view →
         </Link>
@@ -197,7 +197,7 @@ function Requirement({
 function Notice({ tone, children }: { tone: "good" | "bad"; children: React.ReactNode }) {
   return (
     <div
-      className={`rounded-2xl border p-4 text-[13px] leading-relaxed ${
+      className={` border p-4 text-[13px] leading-relaxed ${
         tone === "good" ? "border-good/30 bg-good/10 text-ink" : "border-critical/30 bg-critical/10 text-ink"
       }`}
     >

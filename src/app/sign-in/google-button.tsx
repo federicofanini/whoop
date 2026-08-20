@@ -38,7 +38,7 @@ export function GoogleButton({ label, next }: { label: string; next: string }) {
       type="button"
       onClick={signIn}
       disabled={pending}
-      className="flex w-full items-center justify-center gap-3 rounded-xl border border-hairline bg-surface-2 px-4 py-3 text-[14px] font-semibold text-ink transition-colors hover:bg-hairline disabled:opacity-60"
+      className="flex w-full items-center justify-center gap-3  border border-hairline bg-surface-2 px-4 py-3 text-[14px] font-semibold text-ink transition-colors hover:bg-hairline disabled:opacity-60"
     >
       <GoogleMark />
       {label}
