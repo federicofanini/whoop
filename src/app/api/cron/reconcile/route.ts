@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isDbConfigured } from "@/lib/db";
-import { getAuthorizedClient, lastSyncedAt, syncSince } from "@/lib/whoop/sync";
+import { getAuthorizedClient, lastSyncedAt, listAccountIds, syncSince } from "@/lib/whoop/sync";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -11,6 +11,9 @@ export const maxDuration = 300;
  * Webhooks are the fast path, but deliveries can be missed while the app is
  * redeploying or the database is unreachable. This re-pulls a rolling window so
  * a dropped delivery costs a day of freshness rather than a permanent hole.
+ *
+ * It runs for every linked account: a friend's dashboard is only as fresh as
+ * their own sync, and they are not necessarily around to trigger one.
  */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -22,18 +25,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, skipped: "no database configured" });
   }
 
-  try {
-    const { client, account } = await getAuthorizedClient();
-    const known = await lastSyncedAt(account.userId);
+  // Re-pull at least the last week regardless of how fresh the data looks.
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const results: Record<string, unknown>[] = [];
 
-    // Re-pull at least the last week regardless of how fresh the data looks.
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const since = !known || known > weekAgo ? weekAgo : known;
+  for (const userId of await listAccountIds()) {
+    try {
+      const { client } = await getAuthorizedClient(userId);
+      const known = await lastSyncedAt(userId);
+      const since = !known || known > weekAgo ? weekAgo : known;
 
-    const result = await syncSince(client, since);
-    return NextResponse.json({ ok: true, since: since.toISOString(), ...result });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "reconcile failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+      const result = await syncSince(client, since);
+      results.push({ userId, since: since.toISOString(), ...result });
+    } catch (err) {
+      // One member's expired refresh token must not stop the others syncing.
+      results.push({ userId, error: err instanceof Error ? err.message : "reconcile failed" });
+    }
   }
+
+  return NextResponse.json({ ok: true, accounts: results });
 }

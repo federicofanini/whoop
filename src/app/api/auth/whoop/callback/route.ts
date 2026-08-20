@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb, schema } from "@/lib/db";
+import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
+import { ensureHandle } from "@/lib/friends/queries";
 import { exchangeCodeForTokens } from "@/lib/whoop/oauth";
 import { WhoopClient } from "@/lib/whoop/client";
 import type { WhoopBodyMeasurement, WhoopProfile } from "@/lib/whoop/types";
@@ -67,8 +69,13 @@ export async function GET(request: NextRequest) {
         },
       });
 
-    const res = NextResponse.redirect(new URL("/settings?connected=1", url));
+    // Linking WHOOP *is* signing in: the WHOOP account is the only identity the
+    // app has, and the friends feature needs to know whose dashboard this is.
+    const handle = await ensureHandle(profile.user_id, profile.first_name, profile.last_name);
+
+    const res = NextResponse.redirect(new URL(`/settings?connected=1&handle=${handle}`, url));
     res.cookies.delete("whoop_oauth_state");
+    res.cookies.set(SESSION_COOKIE, createSessionToken(profile.user_id), sessionCookieOptions);
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown_error";

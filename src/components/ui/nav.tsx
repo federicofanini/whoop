@@ -9,10 +9,21 @@ const LINKS = [
   { href: "/recovery", label: "Recovery" },
   { href: "/strain", label: "Strain" },
   { href: "/sleep", label: "Sleep" },
+  { href: "/friends", label: "Friends" },
   { href: "/live", label: "Live" },
 ];
 
-export function AppNav({ demo }: { demo: boolean }) {
+export function AppNav({
+  demo,
+  handle,
+  pendingRequests = 0,
+}: {
+  demo: boolean;
+  /** The signed-in member's handle, or null when nobody is signed in. */
+  handle?: string | null;
+  /** Friend requests waiting on a decision, badged on the Friends link. */
+  pendingRequests?: number;
+}) {
   const pathname = usePathname();
 
   return (
@@ -35,6 +46,7 @@ export function AppNav({ demo }: { demo: boolean }) {
             {LINKS.map((link) => {
               const active =
                 link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+              const badge = link.href === "/friends" ? pendingRequests : 0;
               return (
                 <Link
                   key={link.href}
@@ -46,12 +58,25 @@ export function AppNav({ demo }: { demo: boolean }) {
                   )}
                 >
                   {link.label}
+                  {badge > 0 ? (
+                    <span
+                      className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-series-1 px-1 text-[11px] font-semibold text-plane"
+                      aria-label={`${badge} pending friend request${badge === 1 ? "" : "s"}`}
+                    >
+                      {badge}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
+            {handle ? (
+              <span className="hidden text-[12px] font-medium text-muted lg:inline" title="Signed in">
+                @{handle}
+              </span>
+            ) : null}
             {demo ? (
               <span
                 className="hidden rounded-full border border-hairline bg-surface px-2.5 py-1 text-[11px] font-medium text-muted sm:inline"

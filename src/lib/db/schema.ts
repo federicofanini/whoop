@@ -7,16 +7,25 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
 /**
- * One row per linked WHOOP account. This is a personal dashboard, so in practice
- * there is exactly one row — but keying everything by user id keeps the door open
- * and matches the shape of the webhook payloads, which always name a user.
+ * One row per linked WHOOP account, keyed by the WHOOP user id — which is also
+ * what every webhook payload names, so an incoming event needs no translation.
+ *
+ * A row is simultaneously an identity (you sign in by linking WHOOP), a token
+ * store, and the owner of every metric row below it.
  */
 export const accounts = pgTable("accounts", {
   userId: integer("user_id").primaryKey(),
+  /**
+   * The name friends search for. WHOOP has no public user directory and no
+   * endpoint that resolves a person by name, so the handle is minted here on
+   * first link and is unique to this app.
+   */
+  handle: text("handle").unique(),
   email: text("email"),
   firstName: text("first_name"),
   lastName: text("last_name"),
@@ -164,9 +173,42 @@ export const hrSessions = pgTable(
   (t) => [index("hr_sessions_user_idx").on(t.userId, t.startedAt)],
 );
 
+/**
+ * The friend graph: one row per pair, in whichever direction the request went.
+ *
+ * Sharing is symmetric — accepting means each person sees the other's recovery,
+ * strain and sleep — so a single row carries the whole relationship rather than
+ * two mirrored rows that could drift out of agreement. Reads have to check both
+ * columns; that is a cheaper problem than a half-accepted friendship.
+ */
+export const friendships = pgTable(
+  "friendships",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Who sent the invite. */
+    requesterId: integer("requester_id").notNull(),
+    /** Who has to approve it. */
+    addresseeId: integer("addressee_id").notNull(),
+    status: text("status").$type<FriendshipStatus>().notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** When the addressee accepted. Null while pending. */
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+  },
+  (t) => [
+    // One row per ordered pair. The application also rejects the mirrored
+    // request, so a pair can never hold two rows.
+    uniqueIndex("friendships_pair_idx").on(t.requesterId, t.addresseeId),
+    index("friendships_addressee_idx").on(t.addresseeId, t.status),
+    index("friendships_requester_idx").on(t.requesterId, t.status),
+  ],
+);
+
+export type FriendshipStatus = "pending" | "accepted";
+
 export type Cycle = typeof cycles.$inferSelect;
 export type Recovery = typeof recoveries.$inferSelect;
 export type Sleep = typeof sleeps.$inferSelect;
 export type Workout = typeof workouts.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type HrSample = typeof hrSamples.$inferSelect;
+export type Friendship = typeof friendships.$inferSelect;

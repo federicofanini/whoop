@@ -14,6 +14,13 @@ import type {
 /** Refresh a minute early so a long sync never dies mid-page on an expired token. */
 const REFRESH_MARGIN_MS = 60_000;
 
+/** Every linked account, for jobs that run on behalf of all members. */
+export async function listAccountIds(): Promise<number[]> {
+  const db = getDb();
+  const rows = await db.select({ userId: schema.accounts.userId }).from(schema.accounts);
+  return rows.map((r) => r.userId);
+}
+
 export async function getAccount(userId?: number) {
   const db = getDb();
   const rows = userId

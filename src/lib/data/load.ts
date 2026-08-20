@@ -1,15 +1,16 @@
 import { cache } from "react";
-import { desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { getDb, isDbConfigured, schema } from "@/lib/db";
+import { getSessionUserId } from "@/lib/auth/session";
 import type { DashboardData, DayRecord, SleepRecord, WorkoutRecord } from "@/lib/analytics/types";
 import { generateDemoData } from "./demo";
 
 /**
- * The single entry point every page uses to get data.
+ * The entry point every page uses to get the *signed-in* member's data.
  *
- * If no database is configured, or one is configured but no account has been
- * linked yet, this falls back to the demo dataset rather than rendering an empty
- * shell. `user.demo` tells the UI to say so.
+ * When nobody is signed in — no session, no database, or a linked account that
+ * has not synced yet — this falls back to the demo dataset rather than an empty
+ * shell, and `user.demo` tells the UI to say so.
  *
  * Cached per request: the layout and the page it renders both call this, and
  * without the cache that is two database round trips — or two independent demo
@@ -19,8 +20,11 @@ export const loadDashboardData = cache(
   async (days = 180): Promise<DashboardData> => {
     if (!isDbConfigured()) return generateDemoData();
 
+    const userId = await getSessionUserId();
+    if (userId === null) return generateDemoData();
+
     try {
-      const data = await loadFromDatabase(days);
+      const data = await loadFromDatabase(userId, days);
       // A linked-but-unsynced account has no cycles yet; demo data beats a blank page.
       return data && data.days.length > 0 ? data : generateDemoData();
     } catch (error) {
@@ -30,24 +34,58 @@ export const loadDashboardData = cache(
   },
 );
 
-async function loadFromDatabase(dayCount: number): Promise<DashboardData | null> {
+/**
+ * The same data for a specific member — used by the friend views.
+ *
+ * There is deliberately no demo fallback here. Showing a generated dataset under
+ * a friend's name would be indistinguishable from their real numbers, so an
+ * unsynced friend renders an explicit empty state instead.
+ *
+ * Callers must authorise first: this function trusts its `userId` argument.
+ */
+export const loadDashboardDataFor = cache(
+  async (userId: number, days = 180): Promise<DashboardData | null> => {
+    if (!isDbConfigured()) return null;
+    try {
+      return await loadFromDatabase(userId, days);
+    } catch (error) {
+      console.error(`Could not load data for user ${userId}:`, error);
+      return null;
+    }
+  },
+);
+
+async function loadFromDatabase(userId: number, dayCount: number): Promise<DashboardData | null> {
   const db = getDb();
 
-  const accounts = await db.select().from(schema.accounts).limit(1);
+  const accounts = await db
+    .select()
+    .from(schema.accounts)
+    .where(eq(schema.accounts.userId, userId))
+    .limit(1);
   const account = accounts[0];
   if (!account) return null;
 
   const since = new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000);
 
+  // Every one of these is scoped by user id as well as by date. Once a second
+  // person can link an account, a query filtered only by date returns both
+  // members' rows and silently blends two people's physiology into one chart.
   const [cycleRows, recoveryRows, sleepRows, workoutRows] = await Promise.all([
     db
       .select()
       .from(schema.cycles)
-      .where(gte(schema.cycles.start, since))
+      .where(and(eq(schema.cycles.userId, userId), gte(schema.cycles.start, since)))
       .orderBy(desc(schema.cycles.start)),
-    db.select().from(schema.recoveries).where(eq(schema.recoveries.userId, account.userId)),
-    db.select().from(schema.sleeps).where(gte(schema.sleeps.start, since)),
-    db.select().from(schema.workouts).where(gte(schema.workouts.start, since)),
+    db.select().from(schema.recoveries).where(eq(schema.recoveries.userId, userId)),
+    db
+      .select()
+      .from(schema.sleeps)
+      .where(and(eq(schema.sleeps.userId, userId), gte(schema.sleeps.start, since))),
+    db
+      .select()
+      .from(schema.workouts)
+      .where(and(eq(schema.workouts.userId, userId), gte(schema.workouts.start, since))),
   ]);
 
   const recoveryByCycle = new Map(recoveryRows.map((r) => [r.cycleId, r]));

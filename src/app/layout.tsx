@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AppNav } from "@/components/ui/nav";
+import { getSessionUserId } from "@/lib/auth/session";
+import { loadAccountProfile, loadFriendGraph } from "@/lib/friends/queries";
 import { loadDashboardData } from "@/lib/data/load";
 import "./globals.css";
 
@@ -27,10 +29,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // one place that is true for every page.
   const { user } = await loadDashboardData();
 
+  // Both of these are null/zero when signed out, which is the whole of the
+  // signed-out nav state — no separate branch needed.
+  const userId = await getSessionUserId();
+  const [me, graph] = userId
+    ? await Promise.all([loadAccountProfile(userId), loadFriendGraph(userId)])
+    : [null, null];
+
   return (
     <html lang="en">
       <body className="min-h-dvh antialiased">
-        <AppNav demo={user.demo} />
+        <AppNav
+          demo={user.demo}
+          handle={me?.handle ?? null}
+          pendingRequests={graph?.incoming.length ?? 0}
+        />
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
         <footer className="mx-auto max-w-7xl px-4 pb-10 pt-4 sm:px-6">
           <p className="text-[12px] text-muted">

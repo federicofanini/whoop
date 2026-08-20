@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { isDbConfigured } from "@/lib/db";
 import { isWhoopConfigured } from "@/lib/whoop/oauth";
+import { getSessionUserId } from "@/lib/auth/session";
+import { loadAccountProfile } from "@/lib/friends/queries";
 import { loadDashboardData } from "@/lib/data/load";
 import { Panel, PanelHeader, PageHeader } from "@/components/ui/panel";
 import { SyncControls } from "./sync-controls";
@@ -10,10 +12,13 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ connected?: string; error?: string }>;
+  searchParams: Promise<{ connected?: string; error?: string; handle?: string }>;
 }) {
   const params = await searchParams;
   const { user, days } = await loadDashboardData();
+
+  const userId = await getSessionUserId();
+  const me = userId ? await loadAccountProfile(userId) : null;
 
   const whoopReady = isWhoopConfigured();
   const dbReady = isDbConfigured();
@@ -29,8 +34,8 @@ export default async function SettingsPage({
 
       {params.connected ? (
         <Notice tone="good">
-          WHOOP account linked. Run a backfill below to pull your history — it walks 25 records a
-          page, so a few years takes a few minutes.
+          WHOOP account linked{params.handle ? ` — you are @${params.handle}` : ""}. Run a backfill
+          below to pull your history: it walks 25 records a page, so a few years takes a few minutes.
         </Notice>
       ) : null}
       {params.error ? <Notice tone="bad">Connection failed: {params.error}</Notice> : null}
@@ -71,6 +76,40 @@ export default async function SettingsPage({
             Copy <code className="text-ink">.env.example</code> to{" "}
             <code className="text-ink">.env.local</code> and fill in the values, then restart the
             dev server. Everything except live heart rate needs those two blocks.
+          </p>
+        )}
+      </Panel>
+
+      <Panel>
+        <PanelHeader
+          title="Your identity here"
+          subtitle="Linking WHOOP is how you sign in — the WHOOP account is the only identity this app has."
+        />
+        {me ? (
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-[15px] font-semibold text-ink">@{me.handle}</p>
+              <p className="mt-1 text-[13px] text-muted">
+                Give this handle to family so they can send you a request.{" "}
+                <Link href="/friends" className="text-ink-2 underline underline-offset-4">
+                  Manage sharing
+                </Link>
+              </p>
+            </div>
+            {/* A POST, so a prefetch or a crawler can never sign you out. */}
+            <form action="/api/auth/logout" method="post">
+              <button
+                type="submit"
+                className="rounded-xl border border-hairline px-4 py-2.5 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        ) : (
+          <p className="text-[13px] leading-relaxed text-ink-2">
+            Not signed in. Connecting WHOOP above signs you in and mints the handle friends use to
+            find you.
           </p>
         )}
       </Panel>
