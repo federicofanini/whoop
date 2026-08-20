@@ -17,7 +17,7 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
-import type { SleepNight } from "@/lib/analytics/sleep";
+import type { SleepNight } from "@/core/analytics/sleep";
 import { formatDuration } from "@/lib/utils";
 import { chart, recoveryColor, stageColor } from "@/lib/theme";
 import { Legend, TooltipShell, axisProps, chartMargin, gridProps, weekdayDate } from "./chart-chrome";

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { isDbConfigured } from "@/lib/db";
-import { isWhoopConfigured } from "@/lib/whoop/oauth";
-import { getSessionUserId } from "@/lib/auth/session";
-import { loadAccountProfile } from "@/lib/friends/queries";
-import { loadDashboardData } from "@/lib/data/load";
+import { isDbConfigured } from "@/core/db";
+import { isWhoopConfigured } from "@/core/whoop/oauth";
+import { getViewer } from "@/server/auth";
+import { getTranslator } from "@/server/locale";
+import { isSupabaseConfigured } from "@/server/supabase";
+import { loadViewerDashboard } from "@/server/dashboard";
 import { Panel, PanelHeader, PageHeader } from "@/components/ui/panel";
 import { SyncControls } from "./sync-controls";
 
@@ -15,49 +16,50 @@ export default async function SettingsPage({
   searchParams: Promise<{ connected?: string; error?: string; handle?: string }>;
 }) {
   const params = await searchParams;
-  const { user, days } = await loadDashboardData();
-
-  const userId = await getSessionUserId();
-  const me = userId ? await loadAccountProfile(userId) : null;
+  const t = await getTranslator();
+  const { days } = await loadViewerDashboard();
+  const viewer = await getViewer();
 
   const whoopReady = isWhoopConfigured();
   const dbReady = isDbConfigured();
-  const linked = !user.demo;
+  const supabaseReady = isSupabaseConfigured();
+  const linked = Boolean(viewer?.whoopUserId);
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Settings"
-        title="Connections"
-        description="Two independent pipelines feed this dashboard: the WHOOP REST API for everything historical, and a Bluetooth broadcast for live heart rate. Either can work without the other."
+        eyebrow={t("settings.eyebrow")}
+        title={t("settings.title")}
+        description={t("settings.lead")}
       />
 
       {params.connected ? (
         <Notice tone="good">
-          WHOOP account linked{params.handle ? ` — you are @${params.handle}` : ""}. Run a backfill
-          below to pull your history: it walks 25 records a page, so a few years takes a few minutes.
+          {t("settings.connected")}
         </Notice>
       ) : null}
-      {params.error ? <Notice tone="bad">Connection failed: {params.error}</Notice> : null}
+      {params.error ? (
+        <Notice tone="bad">{t("settings.connectFailed", { message: params.error })}</Notice>
+      ) : null}
 
       <Panel>
         <PanelHeader
-          title="WHOOP account"
-          subtitle="OAuth 2.0 with the offline scope, so the link survives past the first hour."
+          title={t("settings.whoopAccount")}
+          subtitle={t("settings.whoopAccountSub")}
         />
 
         <div className="space-y-3">
-          <Requirement met={dbReady} label="DATABASE_URL configured">
-            Postgres holds your synced history. Without it the dashboard runs on demo data.
+          <Requirement met={dbReady} label={t("settings.reqDatabase")}>
+            {t("settings.reqDatabaseBody")}
           </Requirement>
-          <Requirement met={whoopReady} label="WHOOP OAuth credentials configured">
-            Create an app at developer-dashboard.whoop.com and set the client id, secret and
-            redirect URI.
+          <Requirement met={supabaseReady} label={t("settings.reqSupabase")}>
+            {t("settings.reqSupabaseBody")}
           </Requirement>
-          <Requirement met={linked} label="Account linked">
-            {linked
-              ? `${days.length} cycles held locally.`
-              : "Not linked yet — the dashboard is showing generated data."}
+          <Requirement met={whoopReady} label={t("settings.reqWhoop")}>
+            {t("settings.reqWhoopBody")}
+          </Requirement>
+          <Requirement met={linked} label={t("settings.reqLinked")}>
+            {linked ? t("settings.reqLinkedBody", { count: days.length }) : t("settings.reqNotLinked")}
           </Requirement>
         </div>
 
@@ -67,57 +69,58 @@ export default async function SettingsPage({
               href="/api/auth/whoop"
               className="rounded-xl bg-ink px-4 py-2.5 text-[14px] font-semibold text-plane transition-colors hover:bg-ink-2"
             >
-              {linked ? "Reconnect WHOOP" : "Connect WHOOP"}
+              {linked ? t("settings.reconnect") : t("settings.connect")}
             </a>
             <SyncControls />
           </div>
         ) : (
           <p className="mt-5 rounded-xl border border-hairline bg-surface-2 p-4 text-[13px] leading-relaxed text-ink-2">
-            Copy <code className="text-ink">.env.example</code> to{" "}
-            <code className="text-ink">.env.local</code> and fill in the values, then restart the
-            dev server. Everything except live heart rate needs those two blocks.
+            {t("settings.envHint")}
           </p>
         )}
       </Panel>
 
       <Panel>
         <PanelHeader
-          title="Your identity here"
-          subtitle="Linking WHOOP is how you sign in — the WHOOP account is the only identity this app has."
+          title={t("settings.identity")}
+          subtitle={t("settings.identitySub")}
         />
-        {me ? (
+        {viewer ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-[15px] font-semibold text-ink">@{me.handle}</p>
+              <p className="text-[15px] font-semibold text-ink">@{viewer.handle}</p>
               <p className="mt-1 text-[13px] text-muted">
-                Give this handle to family so they can send you a request.{" "}
+                {viewer.email ? `${t("settings.signedInAs", { email: viewer.email })} · ` : ""}
+                {t("settings.handOut")}{" "}
                 <Link href="/friends" className="text-ink-2 underline underline-offset-4">
-                  Manage sharing
+                  {t("settings.manageSharing")}
                 </Link>
               </p>
             </div>
             {/* A POST, so a prefetch or a crawler can never sign you out. */}
-            <form action="/api/auth/logout" method="post">
+            <form action="/auth/sign-out" method="post">
               <button
                 type="submit"
                 className="rounded-xl border border-hairline px-4 py-2.5 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
               >
-                Sign out
+                {t("nav.signOut")}
               </button>
             </form>
           </div>
         ) : (
           <p className="text-[13px] leading-relaxed text-ink-2">
-            Not signed in. Connecting WHOOP above signs you in and mints the handle friends use to
-            find you.
+            {t("settings.notSignedIn")}{" "}
+            <Link href="/sign-in" className="font-medium text-ink underline underline-offset-4">
+              {t("nav.signIn")}
+            </Link>
           </p>
         )}
       </Panel>
 
       <Panel>
         <PanelHeader
-          title="Live heart rate"
-          subtitle="Independent of the API — this path is pure Bluetooth."
+          title={t("live.title")}
+          subtitle={t("live.sub")}
         />
         <p className="text-[13px] leading-relaxed text-ink-2">
           WHOOP exposes the standard Bluetooth Heart Rate Service when you enable Heart Rate
@@ -138,28 +141,23 @@ export default async function SettingsPage({
       </Panel>
 
       <Panel>
-        <PanelHeader title="Keeping data fresh" subtitle="Three mechanisms, deliberately overlapping." />
+        <PanelHeader title={t("settings.freshness")} subtitle={t("settings.freshnessSub")} />
         <dl className="space-y-4 text-[13px] leading-relaxed">
           <div>
-            <dt className="font-semibold text-ink">Webhooks</dt>
-            <dd className="mt-1 text-ink-2">
-              WHOOP posts to <code className="text-muted">/api/whoop/webhook</code> when a record is
-              scored, rescored or deleted. Signature-verified, and the fastest path.
-            </dd>
+            <dt className="font-semibold text-ink">{t("settings.webhooks")}</dt>
+            <dd className="mt-1 text-ink-2">{t("settings.webhooksBody")}</dd>
           </div>
           <div>
-            <dt className="font-semibold text-ink">Nightly reconcile</dt>
-            <dd className="mt-1 text-ink-2">
-              A cron job re-pulls the last week every morning, so a webhook missed during a deploy
-              costs a day of freshness rather than leaving a permanent hole.
-            </dd>
+            <dt className="font-semibold text-ink">{t("settings.reconcile")}</dt>
+            <dd className="mt-1 text-ink-2">{t("settings.reconcileBody")}</dd>
           </div>
           <div>
-            <dt className="font-semibold text-ink">Manual sync</dt>
-            <dd className="mt-1 text-ink-2">
-              Backfill walks your whole history; incremental picks up from the newest record held.
-              Both respect the 100 requests/minute limit.
-            </dd>
+            <dt className="font-semibold text-ink">{t("settings.manual")}</dt>
+            <dd className="mt-1 text-ink-2">{t("settings.manualBody")}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold text-ink">{t("settings.cli")}</dt>
+            <dd className="mt-1 text-ink-2">{t("settings.cliBody")}</dd>
           </div>
         </dl>
       </Panel>

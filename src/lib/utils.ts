@@ -27,3 +27,14 @@ export function formatDelta(value: number, digits = 0): string {
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
+
+/**
+ * The date format the recovery strip uses in its tooltips.
+ *
+ * Noon rather than midnight: a bare `yyyy-mm-dd` parses as UTC, and formatting
+ * that in a western timezone shows the previous day.
+ */
+export function stripDate(t: { date: (value: Date, options?: Intl.DateTimeFormatOptions) => string }) {
+  return (iso: string) =>
+    t.date(new Date(`${iso}T12:00:00`), { weekday: "short", day: "numeric", month: "short" });
+}

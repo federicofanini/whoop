@@ -1,7 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { DayRecord } from "@/lib/analytics/types";
+import type { DayRecord } from "@/core/analytics/types";
 import { chart, hrZones, series } from "@/lib/theme";
 import { formatDuration } from "@/lib/utils";
 import { Legend, TooltipShell, axisProps, chartMargin, gridProps, weekdayDate } from "./chart-chrome";

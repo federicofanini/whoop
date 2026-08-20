@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { rmssd, sdnn, estimateStrain } from "@/lib/analytics/hrv";
+import { rmssd, sdnn, estimateStrain } from "@/core/analytics/hrv";
 import { hrZones, zoneForHr } from "@/lib/theme";
 import { createSubscriber } from "./transport";
 import type { LiveHrMessage } from "./protocol";

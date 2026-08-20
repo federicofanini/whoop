@@ -97,13 +97,98 @@ A few decisions worth knowing about:
   explicit empty state: a generated dataset under a real person's name would be
   indistinguishable from their real numbers.
 
+## Architecture: core, then everything else
+
+The code is split so that pulling and analysing WHOOP data never depends on the
+UI existing.
+
+```
+  src/core/          pure TypeScript — no React, no Next, no browser
+    db/              Drizzle schema and connection
+    whoop/           OAuth, rate-limited API client, sync
+    analytics/       baselines, load, sleep, insights
+    friends/         handles and the friend graph
+    i18n/            dictionaries and the translator
+    data/            loadDashboardForUser(userId, days)
+
+  src/server/        the Next.js seam — sessions, request caching, policy
+  src/app/           pages and routes
+  scripts/whoop.ts   the same core, driven from a terminal
+```
+
+`src/core` imports nothing from `src/app`, `src/server`, `react` or `next`. That
+is not a style preference — it is what makes the CLI below possible, and it is
+enforced by the fact that the CLI would fail to run otherwise.
+
+The seam is deliberate about *policy*. `loadDashboardForUser(userId, days)` reads
+one member's history and nothing more: it does not decide who is asking, what to
+do when there is no data, or whether to cache. Those are request-shaped decisions
+and they live in `src/server`, where a page can make them differently from a
+friend view — the dashboard falls back to demo data, a friend's page never does.
+
+## Using it without a UI
+
+```bash
+npm run whoop -- status                    # what is linked, how fresh it is
+npm run whoop -- backfill --user 1001      # pull the full history
+npm run whoop -- sync --all                # incremental, every linked account
+npm run whoop -- export --user 1001 --format csv --days 90 --out year.csv
+npm run whoop -- insights --user 1001 --locale it
+```
+
+`insights` is the useful demonstration: it prints the same analysis the dashboard
+renders, in either language, with no server running.
+
+```
+2026-08-20 — WHOOP user 1002
+recovery 40%  strain 17.3  hrv 40ms (baseline 42)  load 1.06x
+
+[ALERT] 14h 35min di debito di sonno nell'ultima settimana
+  Hai dormito in media 6h 31min contro un fabbisogno di 8h 35min. Il debito si
+  ripaga con circa un'ora in più a notte — una singola dormita del fine
+  settimana non lo azzera.
+```
+
+## Signing in
+
+Two accounts, doing two different jobs:
+
+- **Google, via Supabase Auth** — who you are. Creates a profile and a handle on
+  first sign-in.
+- **WHOOP, via OAuth 2.0** — where the data comes from. A *connection* owned by
+  a profile, not an identity.
+
+Keeping them separate is what lets you sign in, be invited by your brother and
+approve him before you have ever linked a strap — and it means unlinking WHOOP
+does not delete who you are or who you share with.
+
+## English and Italian
+
+Locale is resolved per request from, in order: an explicit click on the switcher
+(cookie), the signed-in profile, then `Accept-Language`. A stored choice beats
+the browser — someone with an Italian phone who picked English meant it.
+
+Two things fall out of doing this properly:
+
+- **The insight engine emits keys and numbers, never prose.** A sentence
+  assembled in `insights.ts` could only ever be one language. `translateInsight`
+  turns `{ titleKey, params }` into a sentence at render time — in a page, or in
+  the CLI.
+- **Numbers are formatted by the reader, not the writer.** `10.4` and `10,4` are
+  the same strain target; `7h 32m` is `7h 32min` in Italian, because `m` reads as
+  metres. Both come from `Intl`, keyed on the request's locale.
+
+`it.ts` is typed against `en.ts`, so a missing translation is a compile error
+rather than an English word appearing mid-sentence in production.
+
 ## Stack
 
 - **Next.js 15** (App Router) + React 19 + TypeScript
 - **Tailwind v4** with a dark design system
 - **Recharts** for the analytical charts
 - **Drizzle ORM** + Postgres for synced history and the friend graph
-- **HMAC-signed session cookie** over WHOOP OAuth — no second identity provider
+- **Supabase Auth** for Google sign-in, **Supabase Realtime** for the live stream
+- **No i18n library** — a typed dictionary and `Intl` cover two languages
 - **Supabase Realtime** broadcast channels for the live heart-rate stream
 - **Web Bluetooth** for the HR bridge, with a `BroadcastChannel` fallback for local use
 
@@ -123,8 +208,9 @@ npm run db:push      # create the schema
 npm run dev
 ```
 
-Open `/settings` and click **Connect WHOOP**, then **Backfill history**. Linking
-also signs you in and gives you a handle; `/friends` is where you hand it out.
+Sign in with Google at `/sign-in`, then open `/settings`, click **Connect WHOOP**
+and run a backfill. Your handle is minted at sign-in; `/friends` is where you
+hand it out.
 
 ### Environment
 
@@ -134,8 +220,8 @@ also signs you in and gives you a handle; `/friends` is where you hand it out.
 | `WHOOP_REDIRECT_URI` | Must match the app registration exactly |
 | `WHOOP_WEBHOOK_SECRET` | Signing key for webhook deliveries (defaults to the client secret) |
 | `DATABASE_URL` | Postgres connection string. Required for friends |
-| `SESSION_SECRET` | Signs the session cookie. Falls back to the client secret |
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Realtime transport for live HR |
+
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Google sign-in and the live HR transport |
 | `CRON_SECRET` | Bearer token protecting the nightly reconcile job |
 
 Everything is optional. Without `DATABASE_URL` the dashboard runs on demo data
@@ -242,4 +328,5 @@ npm run typecheck    # tsc --noEmit
 npm run lint         # eslint
 npm run db:generate  # generate SQL migrations from the schema
 npm run db:push      # apply the schema to DATABASE_URL
+npm run whoop        # the CLI above — pass -- before its arguments
 ```

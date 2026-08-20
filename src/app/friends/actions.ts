@@ -2,24 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, or } from "drizzle-orm";
-import { getDb, isDbConfigured, schema } from "@/lib/db";
-import { getSessionUserId } from "@/lib/auth/session";
-import { validateHandle } from "@/lib/friends/handles";
+import { getDb, isDbConfigured, schema } from "@/core/db";
+import { validateHandle } from "@/core/friends/handles";
+import { findProfileByHandle } from "@/core/friends/queries";
+import { getViewer } from "@/server/auth";
 
 export interface ActionResult {
   ok: boolean;
-  message: string;
+  /** A key into the dictionary, so the message can be shown in either language. */
+  key: string;
+  /** Interpolated into the message — currently only ever the handle. */
+  handle?: string;
 }
 
-async function requireSession(): Promise<number | ActionResult> {
-  if (!isDbConfigured()) {
-    return { ok: false, message: "No database configured — friends need one to live in." };
-  }
-  const userId = await getSessionUserId();
-  if (userId === null) {
-    return { ok: false, message: "Connect your WHOOP account first." };
-  }
-  return userId;
+async function requireViewer(): Promise<string | ActionResult> {
+  if (!isDbConfigured()) return { ok: false, key: "friends.error.noDatabase" };
+  const viewer = await getViewer();
+  if (!viewer) return { ok: false, key: "friends.error.signedOut" };
+  return viewer.profileId;
 }
 
 /**
@@ -28,58 +28,52 @@ async function requireSession(): Promise<number | ActionResult> {
  * Two states are deliberately indistinguishable in the response: "no such
  * handle" and "that handle exists". Saying which would turn this form into a
  * membership oracle — anyone could enumerate handles to learn who uses the app.
- * The request is created either way; only a real account ever sees one.
  */
-export async function sendFriendRequest(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
-  if (typeof session !== "number") return session;
+export async function sendFriendRequest(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const viewer = await requireViewer();
+  if (typeof viewer !== "string") return viewer;
 
-  const raw = String(formData.get("handle") ?? "");
-  const parsed = validateHandle(raw);
-  if (!parsed.ok) return { ok: false, message: parsed.error };
+  const parsed = validateHandle(String(formData.get("handle") ?? ""));
+  if (!parsed.ok) return { ok: false, key: parsed.errorKey };
+
+  const handle = parsed.handle;
+  const sent: ActionResult = { ok: true, key: "friends.sent", handle };
+
+  const targetId = await findProfileByHandle(handle);
+  if (!targetId) return sent;
+  if (targetId === viewer) return { ok: false, key: "friends.error.self" };
 
   const db = getDb();
-  const target = await db
-    .select({ userId: schema.accounts.userId })
-    .from(schema.accounts)
-    .where(eq(schema.accounts.handle, parsed.handle))
-    .limit(1);
-
-  const sent = { ok: true, message: `Request sent to @${parsed.handle}.` } as const;
-  const targetId = target[0]?.userId;
-  if (targetId === undefined) return sent;
-
-  if (targetId === session) {
-    return { ok: false, message: "That is your own handle." };
-  }
-
   // A pair is one row in whichever direction it was created, so check both
   // before inserting — otherwise inviting someone who already invited you
   // creates a second, mirrored row that neither side can resolve.
   const existing = await db
-    .select({ id: schema.friendships.id, status: schema.friendships.status, requesterId: schema.friendships.requesterId })
+    .select({
+      id: schema.friendships.id,
+      status: schema.friendships.status,
+      requesterId: schema.friendships.requesterId,
+    })
     .from(schema.friendships)
     .where(
       or(
         and(
-          eq(schema.friendships.requesterId, session),
+          eq(schema.friendships.requesterId, viewer),
           eq(schema.friendships.addresseeId, targetId),
         ),
         and(
           eq(schema.friendships.requesterId, targetId),
-          eq(schema.friendships.addresseeId, session),
+          eq(schema.friendships.addresseeId, viewer),
         ),
       ),
     )
     .limit(1);
 
   const row = existing[0];
-  if (row?.status === "accepted") {
-    return { ok: false, message: `You and @${parsed.handle} are already sharing.` };
-  }
-  if (row && row.requesterId === session) {
-    return { ok: true, message: `Already waiting on @${parsed.handle} to approve.` };
-  }
+  if (row?.status === "accepted") return { ok: false, key: "friends.error.already", handle };
+  if (row && row.requesterId === viewer) return { ok: true, key: "friends.error.pending", handle };
   if (row) {
     // They invited you first. Treat this as the acceptance it plainly is.
     await db
@@ -87,12 +81,12 @@ export async function sendFriendRequest(_prev: ActionResult | null, formData: Fo
       .set({ status: "accepted", respondedAt: new Date() })
       .where(eq(schema.friendships.id, row.id));
     revalidatePath("/friends");
-    return { ok: true, message: `@${parsed.handle} had already invited you — you are now sharing.` };
+    return { ok: true, key: "friends.reverseAccepted", handle };
   }
 
   await db
     .insert(schema.friendships)
-    .values({ requesterId: session, addresseeId: targetId, status: "pending" })
+    .values({ requesterId: viewer, addresseeId: targetId, status: "pending" })
     // Concurrent duplicate submissions land on the unique pair index.
     .onConflictDoNothing();
 
@@ -108,20 +102,19 @@ export async function sendFriendRequest(_prev: ActionResult | null, formData: Fo
  * else's health data.
  */
 export async function acceptFriendRequest(formData: FormData): Promise<void> {
-  const session = await requireSession();
-  if (typeof session !== "number") return;
+  const viewer = await requireViewer();
+  if (typeof viewer !== "string") return;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const db = getDb();
-  await db
+  await getDb()
     .update(schema.friendships)
     .set({ status: "accepted", respondedAt: new Date() })
     .where(
       and(
         eq(schema.friendships.id, id),
-        eq(schema.friendships.addresseeId, session),
+        eq(schema.friendships.addresseeId, viewer),
         eq(schema.friendships.status, "pending"),
       ),
     );
@@ -137,21 +130,20 @@ export async function acceptFriendRequest(formData: FormData): Promise<void> {
  * new request, not an appeal against a stored "no".
  */
 export async function removeFriendship(formData: FormData): Promise<void> {
-  const session = await requireSession();
-  if (typeof session !== "number") return;
+  const viewer = await requireViewer();
+  if (typeof viewer !== "string") return;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const db = getDb();
-  await db
+  await getDb()
     .delete(schema.friendships)
     .where(
       and(
         eq(schema.friendships.id, id),
         or(
-          eq(schema.friendships.requesterId, session),
-          eq(schema.friendships.addresseeId, session),
+          eq(schema.friendships.requesterId, viewer),
+          eq(schema.friendships.addresseeId, viewer),
         ),
       ),
     );
@@ -160,30 +152,27 @@ export async function removeFriendship(formData: FormData): Promise<void> {
 }
 
 /** Renames your handle, which is how other people find you. */
-export async function updateHandle(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  const session = await requireSession();
-  if (typeof session !== "number") return session;
+export async function updateHandle(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const viewer = await requireViewer();
+  if (typeof viewer !== "string") return viewer;
 
   const parsed = validateHandle(String(formData.get("handle") ?? ""));
-  if (!parsed.ok) return { ok: false, message: parsed.error };
+  if (!parsed.ok) return { ok: false, key: parsed.errorKey };
 
-  const db = getDb();
-  const taken = await db
-    .select({ userId: schema.accounts.userId })
-    .from(schema.accounts)
-    .where(eq(schema.accounts.handle, parsed.handle))
-    .limit(1);
-
-  if (taken[0] && taken[0].userId !== session) {
-    return { ok: false, message: `@${parsed.handle} is taken.` };
+  const owner = await findProfileByHandle(parsed.handle);
+  if (owner && owner !== viewer) {
+    return { ok: false, key: "friends.error.taken", handle: parsed.handle };
   }
 
-  await db
-    .update(schema.accounts)
+  await getDb()
+    .update(schema.profiles)
     .set({ handle: parsed.handle, updatedAt: new Date() })
-    .where(eq(schema.accounts.userId, session));
+    .where(eq(schema.profiles.id, viewer));
 
   revalidatePath("/friends");
   revalidatePath("/settings");
-  return { ok: true, message: `You are @${parsed.handle}.` };
+  return { ok: true, key: "friends.renamed", handle: parsed.handle };
 }

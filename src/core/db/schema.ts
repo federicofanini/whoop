@@ -12,20 +12,45 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * One row per linked WHOOP account, keyed by the WHOOP user id — which is also
- * what every webhook payload names, so an incoming event needs no translation.
+ * A person, as this app knows them.
  *
- * A row is simultaneously an identity (you sign in by linking WHOOP), a token
- * store, and the owner of every metric row below it.
+ * Identity comes from Supabase Auth (Google), so `id` is the `auth.users` UUID
+ * and the row is created on first sign-in. Identity is deliberately separate
+ * from the WHOOP connection below: you can sign in, be invited, and appear in
+ * a friend list before you have ever linked a strap — and unlinking WHOOP must
+ * not delete who you are.
  */
-export const accounts = pgTable("accounts", {
-  userId: integer("user_id").primaryKey(),
+export const profiles = pgTable("profiles", {
+  /** Mirrors `auth.users.id` from Supabase. */
+  id: uuid("id").primaryKey(),
   /**
    * The name friends search for. WHOOP has no public user directory and no
    * endpoint that resolves a person by name, so the handle is minted here on
-   * first link and is unique to this app.
+   * first sign-in and is unique to this app.
    */
   handle: text("handle").unique(),
+  email: text("email"),
+  fullName: text("full_name"),
+  avatarUrl: text("avatar_url"),
+  /** "en" | "it" — remembered so the choice survives a new device. */
+  locale: text("locale").$type<Locale>().notNull().default("en"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Locale = "en" | "it";
+
+/**
+ * One row per linked WHOOP account, keyed by the WHOOP user id — which is also
+ * what every webhook payload names, so an incoming event needs no translation.
+ *
+ * This is a *connection*, not an identity: it holds the tokens and owns every
+ * metric row below it, and points back at the profile that linked it.
+ */
+export const accounts = pgTable("accounts", {
+  userId: integer("user_id").primaryKey(),
+  /** The profile that linked this strap. Null only for rows predating auth. */
+  profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }),
   email: text("email"),
   firstName: text("first_name"),
   lastName: text("last_name"),
@@ -180,15 +205,22 @@ export const hrSessions = pgTable(
  * strain and sleep — so a single row carries the whole relationship rather than
  * two mirrored rows that could drift out of agreement. Reads have to check both
  * columns; that is a cheaper problem than a half-accepted friendship.
+ *
+ * Keyed on profiles rather than WHOOP accounts, so a friendship survives
+ * unlinking and relinking a strap, and can exist before either side has one.
  */
 export const friendships = pgTable(
   "friendships",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     /** Who sent the invite. */
-    requesterId: integer("requester_id").notNull(),
+    requesterId: uuid("requester_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     /** Who has to approve it. */
-    addresseeId: integer("addressee_id").notNull(),
+    addresseeId: uuid("addressee_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     status: text("status").$type<FriendshipStatus>().notNull().default("pending"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /** When the addressee accepted. Null while pending. */
@@ -212,3 +244,4 @@ export type Workout = typeof workouts.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type HrSample = typeof hrSamples.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
+export type Profile = typeof profiles.$inferSelect;

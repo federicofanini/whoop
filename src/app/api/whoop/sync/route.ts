@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
-import { getDb, isDbConfigured, schema } from "@/lib/db";
-import { getSessionUserId } from "@/lib/auth/session";
-import { getAuthorizedClient, lastSyncedAt, syncSince, upsertProfile } from "@/lib/whoop/sync";
+import { getDb, isDbConfigured, schema } from "@/core/db";
+import { getViewer } from "@/server/auth";
+import { getAuthorizedClient, lastSyncedAt, syncSince, upsertProfile } from "@/core/whoop/sync";
 
 export const runtime = "nodejs";
 /** A full backfill walks a lot of pages; give it room. */
@@ -21,9 +21,11 @@ export async function POST(request: NextRequest) {
 
   // A sync spends the member's own WHOOP tokens and writes rows under their id,
   // so it runs for whoever is signed in and nobody else.
-  const userId = await getSessionUserId();
+  const viewer = await getViewer();
+  if (!viewer) return NextResponse.json({ error: "not signed in" }, { status: 401 });
+  const userId = viewer.whoopUserId;
   if (userId === null) {
-    return NextResponse.json({ error: "not signed in" }, { status: 401 });
+    return NextResponse.json({ error: "no WHOOP account linked" }, { status: 409 });
   }
 
   const mode = new URL(request.url).searchParams.get("mode") ?? "incremental";

@@ -1,4 +1,4 @@
-import type { DashboardData, DayRecord, SleepRecord, WorkoutRecord } from "@/lib/analytics/types";
+import type { DashboardData, DayRecord, SleepRecord, WorkoutRecord } from "@/core/analytics/types";
 
 /**
  * A deterministic, physiologically plausible dataset.

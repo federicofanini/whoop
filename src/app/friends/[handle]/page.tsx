@@ -1,51 +1,62 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getSessionUserId } from "@/lib/auth/session";
-import { displayName, loadFriendIfPermitted } from "@/lib/friends/queries";
-import { summarizeForFriend } from "@/lib/friends/summary";
-import { loadDashboardData, loadDashboardDataFor } from "@/lib/data/load";
-import { computeBaselines } from "@/lib/analytics/baselines";
-import { computeLoad } from "@/lib/analytics/load";
-import { summarizeSleep } from "@/lib/analytics/sleep";
+import { getViewer } from "@/server/auth";
+import { getTranslator } from "@/server/locale";
+import { displayName, loadFriendIfPermitted } from "@/core/friends/queries";
+import { summarizeForFriend } from "@/core/friends/summary";
+import { loadDashboardFor, loadViewerDashboard } from "@/server/dashboard";
+import type { Translator } from "@/core/i18n";
+import { stripDate } from "@/lib/utils";
+import { computeBaselines } from "@/core/analytics/baselines";
+import { computeLoad } from "@/core/analytics/load";
+import { summarizeSleep } from "@/core/analytics/sleep";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { RecoveryStrip } from "@/components/ui/recovery-strip";
 import { RecoveryBars } from "@/components/charts/recovery-bars";
 import { StrainBars } from "@/components/charts/strain-charts";
 import { Avatar } from "@/components/friends/avatar";
-import { recoveryColor, recoveryLabel, series } from "@/lib/theme";
-import { formatDuration } from "@/lib/utils";
+import { recoveryColor, recoveryLabelKey, series, type BandLabels } from "@/lib/theme";
+
 
 export const dynamic = "force-dynamic";
 
 export default async function FriendPage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
-  const viewerId = await getSessionUserId();
-  if (viewerId === null) notFound();
+  const t = await getTranslator();
+  const viewer = await getViewer();
+  if (!viewer) notFound();
+
+  const bandLabels: BandLabels = {
+    green: t("band.primed"),
+    yellow: t("band.adequate"),
+    red: t("band.compromised"),
+  };
 
   // The authorisation check and the lookup are the same query: an unaccepted
   // handle is indistinguishable from one that does not exist, so guessing a
   // handle reveals nothing about whether it belongs to anyone.
-  const friend = await loadFriendIfPermitted(viewerId, handle);
+  const friend = await loadFriendIfPermitted(viewer.profileId, handle);
   if (!friend) notFound();
 
   const [friendData, mine] = await Promise.all([
-    loadDashboardDataFor(friend.userId, 90),
-    loadDashboardData(),
+    // A friend who has signed in but never linked a strap has nothing to show.
+    friend.whoopUserId ? loadDashboardFor(friend.whoopUserId, 90) : Promise.resolve(null),
+    loadViewerDashboard(),
   ]);
 
   const snapshot = summarizeForFriend(friend, friendData);
   const days = friendData?.days ?? [];
   const name = displayName(friend);
-  const firstName = friend.firstName ?? `@${friend.handle}`;
+  // Italian and English both read better with a first name than a full one.
+  const firstName = friend.fullName?.split(" ")[0] ?? `@${friend.handle}`;
 
   if (days.length === 0) {
     return (
       <div className="space-y-5">
-        <FriendHeader name={name} handle={friend.handle} profile={friend} />
+        <FriendHeader name={name} handle={friend.handle} profile={friend} t={t} />
         <Panel>
           <p className="text-[13px] leading-relaxed text-muted">
-            {firstName} has approved sharing but has no synced history yet. Their data appears here
-            once they run a backfill.
+            {t("friends.noHistory", { name: firstName })}
           </p>
         </Panel>
       </div>
@@ -65,13 +76,13 @@ export default async function FriendPage({ params }: { params: Promise<{ handle:
 
   return (
     <div className="space-y-5">
-      <FriendHeader name={name} handle={friend.handle} profile={friend} />
+      <FriendHeader name={name} handle={friend.handle} profile={friend} t={t} />
 
       <div className="grid gap-5 lg:grid-cols-[1fr_1.3fr]">
         <Panel className="flex flex-col justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              Recovery today
+              {t("friends.recoveryToday")}
             </p>
             <p className="mt-3 flex items-baseline gap-2">
               <span
@@ -89,32 +100,33 @@ export default async function FriendPage({ params }: { params: Promise<{ handle:
                   className="h-2 w-2 rounded-full"
                   style={{ backgroundColor: recoveryColor(recovery) }}
                 />
-                {recoveryLabel(recovery)}
+                {t(recoveryLabelKey(recovery))}
               </p>
             ) : null}
           </div>
 
           <div className="mt-8">
-            <RecoveryStrip days={days} />
+            <RecoveryStrip days={days} label={t("overview.last14")} formatDate={stripDate(t)} />
           </div>
 
           <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-hairline pt-5">
-            <Vital label="HRV" value={today?.hrvMs?.toFixed(0) ?? "—"} unit="ms" />
-            <Vital label="Resting HR" value={today?.restingHeartRate?.toFixed(0) ?? "—"} unit="bpm" />
-            <Vital label="Day strain" value={today?.strain?.toFixed(1) ?? "—"} unit="" />
+            <Vital label={t("overview.hrv")} value={today?.hrvMs?.toFixed(0) ?? t("common.none")} unit={t("common.ms")} />
+            <Vital label={t("overview.restingHr")} value={today?.restingHeartRate?.toFixed(0) ?? t("common.none")} unit={t("common.bpm")} />
+            <Vital label={t("overview.dayStrain")} value={today?.strain?.toFixed(1) ?? t("common.none")} unit="" />
           </dl>
         </Panel>
 
         <Panel>
           <PanelHeader
-            title="This week, side by side"
-            subtitle={`Seven-day averages. ${mine.user.demo ? "Your side is demo data until you connect WHOOP." : "Both sides are each person's own recent history."}`}
+            title={t("friends.sideBySide")}
+            subtitle={mine.user.demo ? t("friends.sideBySideDemo") : t("friends.sideBySideSub")}
           />
           <ComparisonTable
             theirName={firstName}
+            t={t}
             rows={[
               {
-                label: "Recovery",
+                label: t("nav.recovery"),
                 unit: "%",
                 theirs: theirWeek.recovery,
                 mine: myWeek.recovery,
@@ -122,7 +134,7 @@ export default async function FriendPage({ params }: { params: Promise<{ handle:
                 higherIsBetter: true,
               },
               {
-                label: "Day strain",
+                label: t("overview.dayStrain"),
                 unit: "",
                 theirs: theirWeek.strain,
                 mine: myWeek.strain,
@@ -130,11 +142,11 @@ export default async function FriendPage({ params }: { params: Promise<{ handle:
                 higherIsBetter: null,
               },
               {
-                label: "Sleep",
+                label: t("nav.sleep"),
                 unit: "",
                 theirs: theirWeek.asleepMilli,
                 mine: myWeek.asleepMilli,
-                format: (v) => formatDuration(v),
+                format: (v) => t.duration(v),
                 higherIsBetter: true,
               },
             ]}
@@ -143,36 +155,36 @@ export default async function FriendPage({ params }: { params: Promise<{ handle:
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="HRV baseline" value={baselines.hrv.baseline?.toFixed(0) ?? "—"} unit="ms" accent={series.recovery} caption="30-day mean" />
-        <Tile label="RHR baseline" value={baselines.restingHr.baseline?.toFixed(0) ?? "—"} unit="bpm" accent={series.restingHr} caption="30-day mean" />
+        <Tile label={t("friends.hrvBaseline")} value={baselines.hrv.baseline?.toFixed(0) ?? t("common.none")} unit={t("common.ms")} accent={series.recovery} caption={t("friends.thirtyDayMean")} />
+        <Tile label={t("friends.rhrBaseline")} value={baselines.restingHr.baseline?.toFixed(0) ?? t("common.none")} unit={t("common.bpm")} accent={series.restingHr} caption={t("friends.thirtyDayMean")} />
         <Tile
-          label="Load ratio"
+          label={t("overview.loadRatio")}
           value={load.ratio.toFixed(2)}
-          unit="×"
+          unit={t("common.times")}
           accent={series.strain}
           caption={
             load.zone === "productive"
-              ? "Acute load matched to base"
+              ? t("overview.loadProductive")
               : load.zone === "overreaching"
-                ? "Acute load ahead of base"
-                : "Acute load below base"
+                ? t("overview.loadOver")
+                : t("overview.loadUnder")
           }
         />
         <Tile
-          label="Sleep debt"
-          value={formatDuration(sleep.debtMilli)}
+          label={t("overview.sleepDebt")}
+          value={t.duration(sleep.debtMilli)}
           accent={series.sleep}
-          caption="Shortfall over 7 nights"
+          caption={t("friends.shortfall")}
         />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel>
-          <PanelHeader title="Recovery, last 30 days" subtitle="Bars coloured by band; the score is on the tooltip." />
-          <RecoveryBars days={days.slice(-30)} />
+          <PanelHeader title={t("overview.recovery30")} subtitle={t("overview.recovery30Sub")} />
+          <RecoveryBars days={days.slice(-30)} bandLabels={bandLabels} />
         </Panel>
         <Panel>
-          <PanelHeader title="Strain, last 30 days" />
+          <PanelHeader title={t("overview.strain30")} />
           <StrainBars days={days.slice(-30)} />
         </Panel>
       </div>
@@ -205,18 +217,26 @@ interface ComparisonRow {
   higherIsBetter: boolean | null;
 }
 
-function ComparisonTable({ theirName, rows }: { theirName: string; rows: ComparisonRow[] }) {
+function ComparisonTable({
+  theirName,
+  rows,
+  t,
+}: {
+  theirName: string;
+  rows: ComparisonRow[];
+  t: Translator;
+}) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-hairline">
-            <th className="pb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">Metric</th>
+            <th className="pb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{t("friends.metric")}</th>
             <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
               {theirName}
             </th>
-            <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">You</th>
-            <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">Diff</th>
+            <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{t("friends.you")}</th>
+            <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{t("friends.diff")}</th>
           </tr>
         </thead>
         <tbody>
@@ -259,23 +279,25 @@ function FriendHeader({
   name,
   handle,
   profile,
+  t,
 }: {
   name: string;
   handle: string;
   profile: Parameters<typeof Avatar>[0]["profile"];
+  t: Translator;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-4">
       <Avatar profile={profile} size={52} />
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-2xl font-semibold tracking-tight text-ink sm:text-[28px]">{name}</h1>
-        <p className="mt-1 text-[13px] text-muted">@{handle} · sharing with you</p>
+        <p className="mt-1 text-[13px] text-muted">@{handle} · {t("friends.sharingWithYou")}</p>
       </div>
       <Link
         href="/friends"
         className="shrink-0 rounded-xl border border-hairline bg-surface px-4 py-2 text-[13px] font-medium text-ink-2 transition-colors hover:text-ink"
       >
-        ← All friends
+        {t("friends.allFriends")}
       </Link>
     </div>
   );

@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isDbConfigured } from "@/lib/db";
-import { verifyWebhookSignature } from "@/lib/whoop/oauth";
-import { applyWebhookEvent, getAuthorizedClient } from "@/lib/whoop/sync";
-import type { WhoopWebhookEvent } from "@/lib/whoop/types";
+import { isDbConfigured } from "@/core/db";
+import { verifyWebhookSignature } from "@/core/whoop/oauth";
+import { applyWebhookEvent, getAuthorizedClient } from "@/core/whoop/sync";
+import type { WhoopWebhookEvent } from "@/core/whoop/types";
 
 export const runtime = "nodejs";
 

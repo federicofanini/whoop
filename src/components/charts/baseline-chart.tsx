@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { BaselinePoint } from "@/lib/analytics/baselines";
+import type { BaselinePoint } from "@/core/analytics/baselines";
 import { chart } from "@/lib/theme";
 import { Legend, TooltipShell, axisProps, chartMargin, gridProps, weekdayDate } from "./chart-chrome";
 

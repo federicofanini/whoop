@@ -1,18 +1,25 @@
-import { loadDashboardData } from "@/lib/data/load";
-import { computeLoad, optimalStrain, summarizeBalance } from "@/lib/analytics/load";
-import { generateInsights } from "@/lib/analytics/insights";
-import { ewma } from "@/lib/analytics/stats";
+import { loadViewerDashboard } from "@/server/dashboard";
+import { getTranslator } from "@/server/locale";
+import { computeLoad, optimalStrain, summarizeBalance } from "@/core/analytics/load";
+import { generateInsights } from "@/core/analytics/insights";
+import { ewma } from "@/core/analytics/stats";
 import { Panel, PanelHeader, PageHeader } from "@/components/ui/panel";
 import { StatTile } from "@/components/ui/stat";
 import { InsightList } from "@/components/ui/insight-list";
 import { BalanceScatter, DeviationBars, LoadChart } from "@/components/charts/balance-chart";
 import { StrainBars } from "@/components/charts/strain-charts";
-import { series, status } from "@/lib/theme";
+import { series, status, type BandLabels } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
 export default async function StrainPage() {
-  const { days } = await loadDashboardData();
+  const t = await getTranslator();
+  const bandLabels: BandLabels = {
+    green: t("band.primed"),
+    yellow: t("band.adequate"),
+    red: t("band.compromised"),
+  };
+  const { days } = await loadViewerDashboard();
   const load = computeLoad(days);
   const balance = summarizeBalance(days, 45);
   const insights = generateInsights(days).filter((i) => i.domain === "strain");
@@ -86,7 +93,7 @@ export default async function StrainPage() {
       {insights.length > 0 ? (
         <Panel>
           <PanelHeader title="Load signals" subtitle="Where your training is running relative to your capacity." />
-          <InsightList insights={insights} />
+          <InsightList insights={insights} t={t} />
         </Panel>
       ) : null}
 
@@ -96,7 +103,7 @@ export default async function StrainPage() {
             title="Strain against recovery"
             subtitle="Every dot is a day. The shaded diagonal is the strain each recovery level supports — dots above it are days you outran your recovery."
           />
-          <BalanceScatter points={balance.points} />
+          <BalanceScatter points={balance.points} bandLabels={bandLabels} />
         </Panel>
 
         <Panel>

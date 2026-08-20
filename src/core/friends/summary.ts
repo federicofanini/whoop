@@ -1,6 +1,6 @@
-import type { DashboardData, DayRecord } from "@/lib/analytics/types";
-import { asleepMilli } from "@/lib/analytics/sleep";
-import { loadDashboardDataFor } from "@/lib/data/load";
+import type { DashboardData, DayRecord } from "@/core/analytics/types";
+import { asleepMilli } from "@/core/analytics/sleep";
+import { loadDashboardForUser } from "@/core/data/load";
 import { displayName, type FriendProfile } from "./queries";
 
 /**
@@ -74,7 +74,10 @@ export function summarizeForFriend(profile: FriendProfile, data: DashboardData |
 export async function loadFriendSnapshots(friends: FriendProfile[]): Promise<FriendSnapshot[]> {
   return Promise.all(
     friends.map(async (profile) => {
-      const data = await loadDashboardDataFor(profile.userId, 30);
+      // A friend who has signed in but never linked a strap has nothing to load.
+      const data = profile.whoopUserId
+        ? await loadDashboardForUser(profile.whoopUserId, 30)
+        : null;
       return summarizeForFriend(profile, data);
     }),
   );

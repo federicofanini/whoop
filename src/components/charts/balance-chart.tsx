@@ -17,9 +17,9 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
-import type { BalancePoint } from "@/lib/analytics/load";
-import { optimalStrain } from "@/lib/analytics/load";
-import { chart, recoveryColor, recoveryLabel, series } from "@/lib/theme";
+import type { BalancePoint } from "@/core/analytics/load";
+import { optimalStrain } from "@/core/analytics/load";
+import { chart, recoveryBand, recoveryColor, series, type BandLabels } from "@/lib/theme";
 import { Legend, TooltipShell, axisProps, chartMargin, gridProps, weekdayDate } from "./chart-chrome";
 
 /**
@@ -30,7 +30,15 @@ import { Legend, TooltipShell, axisProps, chartMargin, gridProps, weekdayDate } 
  * arbitrarily, so it invents a relationship. A scatter puts one measure on each
  * axis honestly, and the diagonal band shows what each recovery level supports.
  */
-export function BalanceScatter({ points, height = 320 }: { points: BalancePoint[]; height?: number }) {
+export function BalanceScatter({
+  points,
+  bandLabels,
+  height = 320,
+}: {
+  points: BalancePoint[];
+  bandLabels: BandLabels;
+  height?: number;
+}) {
   // The target band, sampled across the recovery range and drawn as a guide.
   const band = Array.from({ length: 51 }, (_, i) => {
     const recovery = i * 2;
@@ -122,10 +130,10 @@ export function BalanceScatter({ points, height = 320 }: { points: BalancePoint[
                     ]}
                     footer={
                       point.verdict === "over"
-                        ? `${recoveryLabel(point.recovery)} day, trained ${point.deviation.toFixed(1)} above it`
+                        ? `${bandLabels[recoveryBand(point.recovery)]} — +${point.deviation.toFixed(1)}`
                         : point.verdict === "under"
-                          ? `${recoveryLabel(point.recovery)} day, left ${Math.abs(point.deviation).toFixed(1)} unused`
-                          : `${recoveryLabel(point.recovery)} day, well matched`
+                          ? `${bandLabels[recoveryBand(point.recovery)]} — ${point.deviation.toFixed(1)}`
+                          : `${bandLabels[recoveryBand(point.recovery)]}`
                     }
                   />
                 );

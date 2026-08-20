@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { isDbConfigured } from "@/lib/db";
-import { getSessionUserId } from "@/lib/auth/session";
-import { loadAccountProfile, loadFriendGraph } from "@/lib/friends/queries";
-import { loadFriendSnapshots } from "@/lib/friends/summary";
+import { isDbConfigured } from "@/core/db";
+import { getViewer } from "@/server/auth";
+import { getTranslator } from "@/server/locale";
+import { loadFriendGraph } from "@/core/friends/queries";
+import { loadFriendSnapshots } from "@/core/friends/summary";
+import type { Translator } from "@/core/i18n";
 import { Panel, PanelHeader, PageHeader } from "@/components/ui/panel";
 import { AddFriendForm } from "@/components/friends/add-friend-form";
 import { FriendCard } from "@/components/friends/friend-card";
@@ -12,76 +14,86 @@ import { HandleField } from "./handle-field";
 export const dynamic = "force-dynamic";
 
 export default async function FriendsPage() {
-  const userId = await getSessionUserId();
+  const t = await getTranslator();
+  const viewer = await getViewer();
 
-  if (!isDbConfigured() || userId === null) {
-    return <SignedOut dbReady={isDbConfigured()} />;
+  if (!isDbConfigured() || !viewer) {
+    return <SignedOut t={t} dbReady={isDbConfigured()} />;
   }
 
-  const [me, graph] = await Promise.all([loadAccountProfile(userId), loadFriendGraph(userId)]);
+  const graph = await loadFriendGraph(viewer.profileId);
   const snapshots = await loadFriendSnapshots(graph.friends);
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        eyebrow="Friends"
-        title="Shared with family"
-        description="Sharing is mutual and symmetric: when a request is approved, each of you sees the other's recovery, strain and sleep. Either side can end it at any time."
-      />
+      <PageHeader eyebrow={t("friends.eyebrow")} title={t("friends.title")} description={t("friends.lead")} />
 
       <div className="grid gap-5 lg:grid-cols-[1.1fr_1fr]">
         <Panel>
-          <PanelHeader
-            title="Invite someone"
-            subtitle="WHOOP has no public directory, so people are found by the handle this app gives them — ask them for theirs."
+          <PanelHeader title={t("friends.invite")} subtitle={t("friends.inviteSub")} />
+          <AddFriendForm
+            labels={{
+              placeholder: t("friends.invitePlaceholder"),
+              field: t("friends.theirHandle"),
+              send: t("friends.send"),
+              sending: t("friends.sending"),
+              willSend: (handle: string) => t("friends.willSendTo", { handle }),
+            }}
+            dict={messageDict(t)}
           />
-          <AddFriendForm />
         </Panel>
 
         <Panel>
-          <PanelHeader
-            title="Your handle"
-            subtitle="This is what you give out. Changing it does not disturb anyone you already share with."
+          <PanelHeader title={t("friends.yourHandle")} subtitle={t("friends.yourHandleSub")} />
+          <HandleField
+            handle={viewer.handle}
+            labels={{ field: t("friends.yourHandle"), rename: t("friends.rename") }}
+            dict={messageDict(t)}
           />
-          <HandleField handle={me?.handle ?? null} />
         </Panel>
       </div>
 
       {graph.incoming.length > 0 ? (
         <Panel>
           <PanelHeader
-            title={`${graph.incoming.length} waiting on you`}
-            subtitle="Approving lets them see your recovery, strain and sleep — and lets you see theirs."
+            title={t("friends.waitingOnYou", { count: graph.incoming.length })}
+            subtitle={t("friends.waitingOnYouSub")}
           />
           <ul className="space-y-3">
             {graph.incoming.map((request) => (
-              <IncomingRequestRow key={request.id} request={request} />
+              <IncomingRequestRow
+                key={request.id}
+                request={request}
+                labels={{
+                  wants: t("friends.wantsToShare"),
+                  approve: t("friends.approve"),
+                  decline: t("friends.decline"),
+                }}
+              />
             ))}
           </ul>
         </Panel>
       ) : null}
 
       <section>
-        <div className="mb-4 flex items-end justify-between gap-3">
-          <h2 className="text-[15px] font-semibold tracking-tight text-ink">
-            Sharing with you{graph.friends.length > 0 ? ` (${graph.friends.length})` : ""}
-          </h2>
-        </div>
+        <h2 className="mb-4 text-[15px] font-semibold tracking-tight text-ink">
+          {t("friends.sharingWith")}
+          {graph.friends.length > 0 ? ` (${graph.friends.length})` : ""}
+        </h2>
 
         {snapshots.length === 0 ? (
           <Panel>
-            <p className="text-[13px] leading-relaxed text-muted">
-              Nobody yet. Send an invite above, or give out your handle and let them start it.
-            </p>
+            <p className="text-[13px] leading-relaxed text-muted">{t("friends.nobodyYet")}</p>
           </Panel>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {snapshots.map((snapshot) => (
               <FriendCard
-                key={snapshot.profile.userId}
+                key={snapshot.profile.profileId}
                 snapshot={snapshot}
+                t={t}
                 friendshipId={
-                  graph.friends.find((f) => f.userId === snapshot.profile.userId)?.friendshipId
+                  graph.friends.find((f) => f.profileId === snapshot.profile.profileId)?.friendshipId
                 }
               />
             ))}
@@ -91,10 +103,14 @@ export default async function FriendsPage() {
 
       {graph.outgoing.length > 0 ? (
         <Panel>
-          <PanelHeader title="Sent, not yet approved" />
+          <PanelHeader title={t("friends.sentNotApproved")} />
           <ul className="space-y-3">
             {graph.outgoing.map((request) => (
-              <OutgoingRequestRow key={request.id} request={request} />
+              <OutgoingRequestRow
+                key={request.id}
+                request={request}
+                labels={{ waiting: t("friends.waitingApproval"), withdraw: t("friends.withdraw") }}
+              />
             ))}
           </ul>
         </Panel>
@@ -104,25 +120,47 @@ export default async function FriendsPage() {
 }
 
 /**
+ * The action results come back as dictionary keys, because the server cannot
+ * assume the language the form was rendered in. The client form needs those
+ * keys resolved, so the strings travel with it.
+ */
+function messageDict(t: Translator): Record<string, string> {
+  const keys = [
+    "friends.sent",
+    "friends.renamed",
+    "friends.reverseAccepted",
+    "friends.error.tooShort",
+    "friends.error.charset",
+    "friends.error.self",
+    "friends.error.already",
+    "friends.error.pending",
+    "friends.error.taken",
+    "friends.error.noDatabase",
+    "friends.error.signedOut",
+  ];
+  // `{handle}` is left in place: the client interpolates it once it knows which
+  // handle the member actually typed.
+  return Object.fromEntries(keys.map((key) => [key, t(key)]));
+}
+
+/**
  * Friends is the one part of the dashboard demo data cannot stand in for — it
  * needs a real account on both ends — so this says what is missing rather than
  * inventing a family.
  */
-function SignedOut({ dbReady }: { dbReady: boolean }) {
+function SignedOut({ t, dbReady }: { t: Translator; dbReady: boolean }) {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Friends"
-        title="Share with family"
-        description="Invite someone by handle. Once they approve, each of you sees the other's recovery, strain and sleep."
+        eyebrow={t("friends.eyebrow")}
+        title={t("friends.signedOutTitle")}
+        description={t("friends.signedOutLead")}
       />
       <Panel>
         <p className="text-[13px] leading-relaxed text-ink-2">
-          {dbReady
-            ? "Connect your WHOOP account to get a handle and start sharing."
-            : "Friends need a database to live in — set DATABASE_URL, then connect your WHOOP account."}{" "}
-          <Link href="/settings" className="font-medium text-ink underline underline-offset-4">
-            Open settings
+          {dbReady ? t("friends.signedOutConnect") : t("friends.signedOutDb")}{" "}
+          <Link href="/sign-in" className="font-medium text-ink underline underline-offset-4">
+            {t("nav.signIn")}
           </Link>
         </p>
       </Panel>

@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS "accounts" (
 	"user_id" integer PRIMARY KEY NOT NULL,
+	"profile_id" uuid,
 	"email" text,
 	"first_name" text,
 	"last_name" text,
@@ -29,6 +30,15 @@ CREATE TABLE IF NOT EXISTS "cycles" (
 	"updated_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "friendships" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"requester_id" uuid NOT NULL,
+	"addressee_id" uuid NOT NULL,
+	"status" text DEFAULT 'pending' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"responded_at" timestamp with time zone
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "hr_samples" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" integer NOT NULL,
@@ -46,6 +56,18 @@ CREATE TABLE IF NOT EXISTS "hr_sessions" (
 	"ended_at" timestamp with time zone,
 	"device_name" text,
 	"label" text
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "profiles" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"handle" text,
+	"email" text,
+	"full_name" text,
+	"avatar_url" text,
+	"locale" text DEFAULT 'en' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "profiles_handle_unique" UNIQUE("handle")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "recoveries" (
@@ -108,7 +130,28 @@ CREATE TABLE IF NOT EXISTS "workouts" (
 	"updated_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "accounts" ADD CONSTRAINT "accounts_profile_id_profiles_id_fk" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "friendships" ADD CONSTRAINT "friendships_requester_id_profiles_id_fk" FOREIGN KEY ("requester_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "friendships" ADD CONSTRAINT "friendships_addressee_id_profiles_id_fk" FOREIGN KEY ("addressee_id") REFERENCES "public"."profiles"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "cycles_user_start_idx" ON "cycles" USING btree ("user_id","start");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "friendships_pair_idx" ON "friendships" USING btree ("requester_id","addressee_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "friendships_addressee_idx" ON "friendships" USING btree ("addressee_id","status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "friendships_requester_idx" ON "friendships" USING btree ("requester_id","status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "hr_samples_session_idx" ON "hr_samples" USING btree ("session_id","recorded_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "hr_sessions_user_idx" ON "hr_sessions" USING btree ("user_id","started_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "recoveries_user_idx" ON "recoveries" USING btree ("user_id");--> statement-breakpoint

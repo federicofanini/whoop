@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { removeFriendship } from "@/app/friends/actions";
-import type { FriendSnapshot } from "@/lib/friends/summary";
-import { recoveryColor, recoveryLabel, series } from "@/lib/theme";
+import type { FriendSnapshot } from "@/core/friends/summary";
+import { recoveryColor, recoveryLabelKey, series } from "@/lib/theme";
 import { RecoveryStrip } from "@/components/ui/recovery-strip";
-import { formatDuration } from "@/lib/utils";
+import type { Translator } from "@/core/i18n";
+import { stripDate } from "@/lib/utils";
 import { Avatar } from "./avatar";
 
 /**
@@ -13,7 +14,15 @@ import { Avatar } from "./avatar";
  * it always travels with its written band — the red/amber/green ramp is not
  * colour-vision separable and can never carry the meaning alone.
  */
-export function FriendCard({ snapshot, friendshipId }: { snapshot: FriendSnapshot; friendshipId?: string }) {
+export function FriendCard({
+  snapshot,
+  t,
+  friendshipId,
+}: {
+  snapshot: FriendSnapshot;
+  t: Translator;
+  friendshipId?: string;
+}) {
   const { latest, weekly, profile, name } = snapshot;
   const recovery = latest?.recovery ?? null;
 
@@ -34,7 +43,7 @@ export function FriendCard({ snapshot, friendshipId }: { snapshot: FriendSnapsho
               {recovery}
               <span className="text-[15px] font-medium text-ink-2">%</span>
             </p>
-            <p className="mt-1 text-[11px] font-medium text-muted">{recoveryLabel(recovery)}</p>
+            <p className="mt-1 text-[11px] font-medium text-muted">{t(recoveryLabelKey(recovery))}</p>
           </div>
         ) : null}
       </header>
@@ -43,32 +52,32 @@ export function FriendCard({ snapshot, friendshipId }: { snapshot: FriendSnapsho
         <>
           <dl className="mt-5 grid grid-cols-3 gap-3 border-t border-hairline pt-4">
             <Metric
-              label="Strain"
+              label={t("nav.strain")}
               value={latest.strain?.toFixed(1) ?? "—"}
-              sub={weekly.strain !== null ? `${weekly.strain.toFixed(1)} avg` : undefined}
+              sub={weekly.strain !== null ? t.number(weekly.strain, 1) : undefined}
               accent={series.strain}
             />
             <Metric
-              label="Sleep"
-              value={latest.asleepMilli !== null ? formatDuration(latest.asleepMilli) : "—"}
-              sub={weekly.asleepMilli !== null ? `${formatDuration(weekly.asleepMilli)} avg` : undefined}
+              label={t("nav.sleep")}
+              value={latest.asleepMilli !== null ? t.duration(latest.asleepMilli) : t("common.none")}
+              sub={weekly.asleepMilli !== null ? t.duration(weekly.asleepMilli) : undefined}
               accent={series.sleep}
             />
             <Metric
-              label="HRV"
+              label={t("overview.hrv")}
               value={latest.hrvMs !== null ? latest.hrvMs.toFixed(0) : "—"}
-              sub={latest.restingHr !== null ? `${latest.restingHr} bpm rest` : undefined}
+              sub={latest.restingHr !== null ? `${latest.restingHr} ${t("common.bpm")}` : undefined}
               accent={series.recovery}
             />
           </dl>
 
           <div className="mt-5">
-            <RecoveryStrip days={snapshot.days} />
+            <RecoveryStrip days={snapshot.days} label={t("overview.last14")} formatDate={stripDate(t)} />
           </div>
         </>
       ) : (
         <p className="mt-5 border-t border-hairline pt-4 text-[13px] leading-relaxed text-muted">
-          Nothing synced yet — {name.split(" ")[0]} has linked WHOOP but has not run a backfill.
+          {t("friends.notSynced", { name: name.split(" ")[0] })}
         </p>
       )}
 
@@ -77,7 +86,7 @@ export function FriendCard({ snapshot, friendshipId }: { snapshot: FriendSnapsho
           href={`/friends/${profile.handle}`}
           className="text-[13px] font-medium text-ink-2 transition-colors hover:text-ink"
         >
-          Full detail →
+          {t("friends.fullDetail")}
         </Link>
         {friendshipId ? (
           <form action={removeFriendship}>
@@ -86,7 +95,7 @@ export function FriendCard({ snapshot, friendshipId }: { snapshot: FriendSnapsho
               type="submit"
               className="text-[12px] font-medium text-muted transition-colors hover:text-critical"
             >
-              Stop sharing
+              {t("friends.stopSharing")}
             </button>
           </form>
         ) : null}

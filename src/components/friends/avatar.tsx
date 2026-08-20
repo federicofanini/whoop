@@ -1,12 +1,13 @@
-import { displayName, type FriendProfile } from "@/lib/friends/queries";
+import { displayName, type FriendProfile } from "@/core/friends/queries";
 import { cn } from "@/lib/utils";
 
 /**
- * Initials on a colour derived from the handle.
+ * The Google profile picture when there is one, initials on a derived colour
+ * when there is not.
  *
- * WHOOP's API exposes no profile photo, and asking people to upload one would
- * add storage, moderation and a settings screen to a two-feature app. A stable
- * colour per handle is enough to tell four family members apart in a list.
+ * Google already hosts the photo, so there is no upload, no storage and no
+ * moderation to build. The fallback is deterministic per handle, which is
+ * enough to tell four family members apart in a list.
  */
 const TINTS = ["#3987e5", "#199e70", "#d95926", "#9085e9", "#0ca30c", "#fab219"] as const;
 
@@ -20,6 +21,23 @@ export function Avatar({
   muted?: boolean;
 }) {
   const name = displayName(profile);
+
+  if (profile.avatarUrl) {
+    return (
+      // Not next/image: these are arbitrary Google CDN URLs, and configuring a
+      // remote pattern for one 40px avatar buys nothing.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={profile.avatarUrl}
+        alt=""
+        width={size}
+        height={size}
+        className={cn("shrink-0 rounded-full object-cover", muted && "opacity-60")}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
   const initials = name
     .replace(/^@/, "")
     .split(/[\s._]+/)

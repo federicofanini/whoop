@@ -1,17 +1,24 @@
-import { loadDashboardData } from "@/lib/data/load";
-import { baselineSeries, computeBaselines } from "@/lib/analytics/baselines";
-import { generateInsights } from "@/lib/analytics/insights";
+import { loadViewerDashboard } from "@/server/dashboard";
+import { getTranslator } from "@/server/locale";
+import { baselineSeries, computeBaselines } from "@/core/analytics/baselines";
+import { generateInsights } from "@/core/analytics/insights";
 import { Panel, PanelHeader, PageHeader } from "@/components/ui/panel";
 import { StatTile } from "@/components/ui/stat";
 import { InsightList } from "@/components/ui/insight-list";
 import { BaselineChart } from "@/components/charts/baseline-chart";
 import { RecoveryBars } from "@/components/charts/recovery-bars";
-import { series, status } from "@/lib/theme";
+import { series, status, type BandLabels } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
 export default async function RecoveryPage() {
-  const { days } = await loadDashboardData();
+  const t = await getTranslator();
+  const bandLabels: BandLabels = {
+    green: t("band.primed"),
+    yellow: t("band.adequate"),
+    red: t("band.compromised"),
+  };
+  const { days } = await loadViewerDashboard();
   const baselines = computeBaselines(days);
   const insights = generateInsights(days).filter((i) => i.domain === "recovery");
 
@@ -78,7 +85,7 @@ export default async function RecoveryPage() {
       {insights.length > 0 ? (
         <Panel>
           <PanelHeader title="Recovery signals" subtitle="Only what departs from your normal range." />
-          <InsightList insights={insights} />
+          <InsightList insights={insights} t={t} />
         </Panel>
       ) : null}
 
@@ -100,7 +107,7 @@ export default async function RecoveryPage() {
 
       <Panel>
         <PanelHeader title="Daily recovery score" subtitle="Last 60 days." />
-        <RecoveryBars days={days.slice(-60)} height={240} />
+        <RecoveryBars days={days.slice(-60)} bandLabels={bandLabels} height={240} />
       </Panel>
     </div>
   );

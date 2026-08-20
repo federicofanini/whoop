@@ -3,9 +3,22 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { sendFriendRequest, type ActionResult } from "@/app/friends/actions";
-import { normalizeHandle } from "@/lib/friends/handles";
+import { normalizeHandle } from "@/core/friends/handles";
+import { resolveMessage } from "./messages";
 
-export function AddFriendForm() {
+export function AddFriendForm({
+  labels,
+  dict,
+}: {
+  labels: {
+    placeholder: string;
+    field: string;
+    send: string;
+    sending: string;
+    willSend: (handle: string) => string;
+  };
+  dict: Record<string, string>;
+}) {
   const [state, action] = useActionState<ActionResult | null, FormData>(sendFriendRequest, null);
   const [value, setValue] = useState("");
 
@@ -27,32 +40,32 @@ export function AddFriendForm() {
             name="handle"
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            placeholder="brother.handle"
+            placeholder={labels.placeholder}
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            aria-label="Their handle"
+            aria-label={labels.field}
             className="w-full rounded-xl border border-hairline bg-surface-2 py-2.5 pl-7 pr-3.5 text-[14px] text-ink placeholder:text-muted focus:border-baseline focus:outline-none"
           />
         </div>
-        <SubmitButton />
+        <SubmitButton send={labels.send} sending={labels.sending} />
       </div>
 
       {preview && preview !== value.replace(/^@/, "") ? (
-        <p className="text-[12px] text-muted">Will be sent to @{preview}</p>
+        <p className="text-[12px] text-muted">{labels.willSend(preview)}</p>
       ) : null}
 
       {state ? (
         <p className={`text-[13px] ${state.ok ? "text-good" : "text-critical"}`}>
           <span aria-hidden>{state.ok ? "✓ " : "✕ "}</span>
-          {state.message}
+          {resolveMessage(dict, state)}
         </p>
       ) : null}
     </form>
   );
 }
 
-function SubmitButton() {
+function SubmitButton({ send, sending }: { send: string; sending: string }) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -60,7 +73,7 @@ function SubmitButton() {
       disabled={pending}
       className="shrink-0 rounded-xl bg-ink px-5 py-2.5 text-[14px] font-semibold text-plane transition-opacity hover:opacity-90 disabled:opacity-50"
     >
-      {pending ? "Sending…" : "Send request"}
+      {pending ? sending : send}
     </button>
   );
 }

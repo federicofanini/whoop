@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildAuthorizeUrl, createState, isWhoopConfigured } from "@/lib/whoop/oauth";
+import { buildAuthorizeUrl, createState, isWhoopConfigured } from "@/core/whoop/oauth";
 
 export const runtime = "nodejs";
 

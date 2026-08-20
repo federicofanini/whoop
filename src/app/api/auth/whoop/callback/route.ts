@@ -1,14 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getDb, schema } from "@/lib/db";
-import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
-import { ensureHandle } from "@/lib/friends/queries";
-import { exchangeCodeForTokens } from "@/lib/whoop/oauth";
-import { WhoopClient } from "@/lib/whoop/client";
-import type { WhoopBodyMeasurement, WhoopProfile } from "@/lib/whoop/types";
 import { sql } from "drizzle-orm";
+import { getDb, schema } from "@/core/db";
+import { exchangeCodeForTokens } from "@/core/whoop/oauth";
+import { WhoopClient } from "@/core/whoop/client";
+import type { WhoopBodyMeasurement, WhoopProfile } from "@/core/whoop/types";
+import { getViewer } from "@/server/auth";
 
 export const runtime = "nodejs";
 
+/**
+ * Finishes linking a WHOOP strap to the signed-in profile.
+ *
+ * WHOOP is a *data source* here, not an identity — Google already said who this
+ * is. So this route requires an existing session and refuses to create one:
+ * without that check, anyone who completed a WHOOP handshake would attach a
+ * strap to whichever profile happened to be first in the table.
+ */
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
@@ -27,6 +34,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/settings?error=state_mismatch", url));
   }
 
+  const viewer = await getViewer();
+  if (!viewer) {
+    return NextResponse.redirect(new URL("/sign-in?next=/settings", url));
+  }
+
   try {
     const tokens = await exchangeCodeForTokens(code);
     const client = new WhoopClient(tokens.access_token);
@@ -36,11 +48,11 @@ export async function GET(request: NextRequest) {
       .get<WhoopBodyMeasurement>("/v2/user/measurement/body")
       .catch(() => null as WhoopBodyMeasurement | null);
 
-    const db = getDb();
-    await db
+    await getDb()
       .insert(schema.accounts)
       .values({
         userId: profile.user_id,
+        profileId: viewer.profileId,
         email: profile.email,
         firstName: profile.first_name,
         lastName: profile.last_name,
@@ -55,6 +67,9 @@ export async function GET(request: NextRequest) {
       .onConflictDoUpdate({
         target: schema.accounts.userId,
         set: {
+          // Re-linking the same strap under a different profile moves it, which
+          // is what someone switching Google accounts means by "reconnect".
+          profileId: sql`excluded.profile_id`,
           accessToken: sql`excluded.access_token`,
           refreshToken: sql`excluded.refresh_token`,
           expiresAt: sql`excluded.expires_at`,
@@ -69,13 +84,8 @@ export async function GET(request: NextRequest) {
         },
       });
 
-    // Linking WHOOP *is* signing in: the WHOOP account is the only identity the
-    // app has, and the friends feature needs to know whose dashboard this is.
-    const handle = await ensureHandle(profile.user_id, profile.first_name, profile.last_name);
-
-    const res = NextResponse.redirect(new URL(`/settings?connected=1&handle=${handle}`, url));
+    const res = NextResponse.redirect(new URL("/settings?connected=1", url));
     res.cookies.delete("whoop_oauth_state");
-    res.cookies.set(SESSION_COOKIE, createSessionToken(profile.user_id), sessionCookieOptions);
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown_error";

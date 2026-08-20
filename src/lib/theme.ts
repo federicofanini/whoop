@@ -49,6 +49,14 @@ export const stageColor = {
 export type RecoveryBand = "green" | "yellow" | "red";
 
 /**
+ * The three band words, resolved by the server and handed to client charts.
+ *
+ * Charts run in the browser and cannot reach the request's translator, so the
+ * words travel as a prop. Colour still never carries the meaning alone.
+ */
+export type BandLabels = Record<RecoveryBand, string>;
+
+/**
  * WHOOP's own thresholds: 67%+ is a green day, 34-66% yellow, below that red.
  */
 export function recoveryBand(score: number): RecoveryBand {
@@ -62,10 +70,13 @@ export function recoveryColor(score: number): string {
   return band === "green" ? status.good : band === "yellow" ? status.warning : status.critical;
 }
 
-/** The written half of the status pairing. Colour never travels without it. */
-export function recoveryLabel(score: number): string {
+/**
+ * The written half of the status pairing, as a dictionary key. Colour never
+ * travels without it, and the word has to be readable in either language.
+ */
+export function recoveryLabelKey(score: number): "band.primed" | "band.adequate" | "band.compromised" {
   const band = recoveryBand(score);
-  return band === "green" ? "Primed" : band === "yellow" ? "Adequate" : "Compromised";
+  return band === "green" ? "band.primed" : band === "yellow" ? "band.adequate" : "band.compromised";
 }
 
 /**

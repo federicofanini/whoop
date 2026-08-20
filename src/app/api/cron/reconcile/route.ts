@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isDbConfigured } from "@/lib/db";
-import { getAuthorizedClient, lastSyncedAt, listAccountIds, syncSince } from "@/lib/whoop/sync";
+import { isDbConfigured } from "@/core/db";
+import { getAuthorizedClient, lastSyncedAt, listAccountIds, syncSince } from "@/core/whoop/sync";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;

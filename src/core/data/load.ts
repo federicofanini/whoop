@@ -1,59 +1,23 @@
-import { cache } from "react";
 import { and, desc, eq, gte } from "drizzle-orm";
-import { getDb, isDbConfigured, schema } from "@/lib/db";
-import { getSessionUserId } from "@/lib/auth/session";
-import type { DashboardData, DayRecord, SleepRecord, WorkoutRecord } from "@/lib/analytics/types";
-import { generateDemoData } from "./demo";
+import { getDb, isDbConfigured, schema } from "@/core/db";
+import type { DashboardData, DayRecord, SleepRecord, WorkoutRecord } from "@/core/analytics/types";
 
 /**
- * The entry point every page uses to get the *signed-in* member's data.
+ * Loads one WHOOP member's history straight from Postgres.
  *
- * When nobody is signed in — no session, no database, or a linked account that
- * has not synced yet — this falls back to the demo dataset rather than an empty
- * shell, and `user.demo` tells the UI to say so.
- *
- * Cached per request: the layout and the page it renders both call this, and
- * without the cache that is two database round trips — or two independent demo
- * datasets, which would disagree with each other on screen.
- */
-export const loadDashboardData = cache(
-  async (days = 180): Promise<DashboardData> => {
-    if (!isDbConfigured()) return generateDemoData();
-
-    const userId = await getSessionUserId();
-    if (userId === null) return generateDemoData();
-
-    try {
-      const data = await loadFromDatabase(userId, days);
-      // A linked-but-unsynced account has no cycles yet; demo data beats a blank page.
-      return data && data.days.length > 0 ? data : generateDemoData();
-    } catch (error) {
-      console.error("Falling back to demo data:", error);
-      return generateDemoData();
-    }
-  },
-);
-
-/**
- * The same data for a specific member — used by the friend views.
- *
- * There is deliberately no demo fallback here. Showing a generated dataset under
- * a friend's name would be indistinguishable from their real numbers, so an
- * unsynced friend renders an explicit empty state instead.
+ * Pure and framework-free: no session lookup, no request cache, no demo
+ * fallback. Those are policy decisions that belong to whatever is calling —
+ * a page, a CLI command, an export job — not to the data layer.
  *
  * Callers must authorise first: this function trusts its `userId` argument.
  */
-export const loadDashboardDataFor = cache(
-  async (userId: number, days = 180): Promise<DashboardData | null> => {
-    if (!isDbConfigured()) return null;
-    try {
-      return await loadFromDatabase(userId, days);
-    } catch (error) {
-      console.error(`Could not load data for user ${userId}:`, error);
-      return null;
-    }
-  },
-);
+export async function loadDashboardForUser(
+  userId: number,
+  days = 180,
+): Promise<DashboardData | null> {
+  if (!isDbConfigured()) return null;
+  return loadFromDatabase(userId, days);
+}
 
 async function loadFromDatabase(userId: number, dayCount: number): Promise<DashboardData | null> {
   const db = getDb();

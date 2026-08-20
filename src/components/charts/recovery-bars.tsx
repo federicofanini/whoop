@@ -1,8 +1,8 @@
 "use client";
 
 import { Bar, BarChart, Cell, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { DayRecord } from "@/lib/analytics/types";
-import { chart, recoveryColor, recoveryLabel } from "@/lib/theme";
+import type { DayRecord } from "@/core/analytics/types";
+import { chart, recoveryBand, recoveryColor, type BandLabels } from "@/lib/theme";
 import { TooltipShell, axisProps, chartMargin, gridProps, weekdayDate } from "./chart-chrome";
 
 /**
@@ -12,7 +12,15 @@ import { TooltipShell, axisProps, chartMargin, gridProps, weekdayDate } from "./
  * so the score itself is always on screen, and the tooltip names the band in
  * words. Colour is the fastest channel here, never the only one.
  */
-export function RecoveryBars({ days, height = 220 }: { days: DayRecord[]; height?: number }) {
+export function RecoveryBars({
+  days,
+  bandLabels,
+  height = 220,
+}: {
+  days: DayRecord[];
+  bandLabels: BandLabels;
+  height?: number;
+}) {
   const data = days
     .filter((d) => typeof d.recoveryScore === "number")
     .map((d) => ({
@@ -62,7 +70,7 @@ export function RecoveryBars({ days, height = 220 }: { days: DayRecord[]; height
                     { label: "HRV", value: point.hrv ? `${point.hrv.toFixed(0)} ms` : "—" },
                     { label: "Resting HR", value: point.rhr ? `${point.rhr} bpm` : "—" },
                   ]}
-                  footer={recoveryLabel(point.score)}
+                  footer={bandLabels[recoveryBand(point.score)]}
                 />
               );
             }}

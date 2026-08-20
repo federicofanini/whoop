@@ -1,5 +1,5 @@
 import { desc, eq, sql } from "drizzle-orm";
-import { getDb, schema } from "@/lib/db";
+import { getDb, schema } from "@/core/db";
 import { WhoopAuthError, WhoopClient } from "./client";
 import { refreshTokens } from "./oauth";
 import type {

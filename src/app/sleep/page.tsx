@@ -1,6 +1,7 @@
-import { loadDashboardData } from "@/lib/data/load";
-import { sleepRecoveryCorrelation, summarizeSleep } from "@/lib/analytics/sleep";
-import { generateInsights } from "@/lib/analytics/insights";
+import { loadViewerDashboard } from "@/server/dashboard";
+import { getTranslator } from "@/server/locale";
+import { sleepRecoveryCorrelation, summarizeSleep } from "@/core/analytics/sleep";
+import { generateInsights } from "@/core/analytics/insights";
 import { Panel, PanelHeader, PageHeader } from "@/components/ui/panel";
 import { StatTile } from "@/components/ui/stat";
 import { InsightList } from "@/components/ui/insight-list";
@@ -16,7 +17,8 @@ import { formatDuration } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function SleepPage() {
-  const { days } = await loadDashboardData();
+  const t = await getTranslator();
+  const { days } = await loadViewerDashboard();
   const sleep = summarizeSleep(days, 30);
   const correlation = sleepRecoveryCorrelation(days.slice(-90));
   const insights = generateInsights(days).filter((i) => i.domain === "sleep");
@@ -69,7 +71,7 @@ export default async function SleepPage() {
       {insights.length > 0 ? (
         <Panel>
           <PanelHeader title="Sleep signals" subtitle="Where your nights are helping or costing you." />
-          <InsightList insights={insights} />
+          <InsightList insights={insights} t={t} />
         </Panel>
       ) : null}
 

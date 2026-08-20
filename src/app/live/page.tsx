@@ -1,11 +1,11 @@
-import { loadDashboardData } from "@/lib/data/load";
+import { loadViewerDashboard } from "@/server/dashboard";
 import { PageHeader } from "@/components/ui/panel";
 import { LiveView } from "@/components/live/live-view";
 
 export const dynamic = "force-dynamic";
 
 export default async function LivePage() {
-  const { user, days } = await loadDashboardData();
+  const { user, days } = await loadViewerDashboard();
   const today = days[days.length - 1];
 
   return (
