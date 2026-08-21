@@ -1,25 +1,30 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import dynamic from "next/dynamic";
 import { useLiveHeartRate } from "@/lib/live/use-live-hr";
-import { hrZones, series, zoneForHr } from "@/lib/theme";
+import { series, zoneForHr } from "@/lib/theme";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { StatTile } from "@/components/ui/stat";
-import { ZoneDistribution } from "@/components/charts/strain-charts";
-import { TooltipShell, axisProps, chartMargin, gridProps } from "@/components/charts/chart-chrome";
+import { ChartSkeleton } from "@/components/ui/skeleton";
 import { useChartTokens } from "@/lib/use-theme-tokens";
 import { useT } from "@/components/i18n-provider";
 import { BridgeCard } from "./bridge-card";
+
+/*
+ * Both charts on this page are deferred. The connect button, the current bpm
+ * and the session tiles are the reason someone opens this view; recharts is
+ * only needed once beats are actually arriving.
+ */
+const LiveTrace = dynamic(() => import("./live-trace").then((m) => m.LiveTrace), {
+  ssr: false,
+  loading: () => <ChartSkeleton height={340} />,
+});
+
+const ZoneDistribution = dynamic(
+  () => import("@/components/charts/strain-charts").then((m) => m.ZoneDistribution),
+  { ssr: false, loading: () => <ChartSkeleton height={200} /> },
+);
 
 /**
  * The live session view — the subscribing half of the pipeline.
@@ -115,90 +120,7 @@ export function LiveView({ maxHr, restingHr }: { maxHr: number; restingHr: numbe
             {waiting ? (
               <WaitingState />
             ) : (
-              <div style={{ height: 340 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={chartMargin}>
-                    <defs>
-                      <linearGradient id="hrFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={series.strain} stopOpacity={0.35} />
-                        <stop offset="100%" stopColor={series.strain} stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-
-                    <CartesianGrid {...gridProps(tokens)} />
-                    <XAxis
-                      dataKey="at"
-                      {...axisProps(tokens)}
-                      type="number"
-                      domain={["dataMin", "dataMax"]}
-                      tickFormatter={(value: number) =>
-                        new Date(value).toLocaleTimeString([], { minute: "2-digit", second: "2-digit" })
-                      }
-                      minTickGap={40}
-                    />
-                    <YAxis
-                      {...axisProps(tokens)}
-                      width={34}
-                      domain={[
-                        (min: number) => Math.max(40, Math.floor((min - 8) / 10) * 10),
-                        (max: number) => Math.ceil((max + 8) / 10) * 10,
-                      ]}
-                    />
-
-                    {/* Zone edges give the trace a reference without a second axis. */}
-                    {hrZones.map((zone) => (
-                      <ReferenceLine
-                        key={zone.zone}
-                        y={Math.round(zone.min * maxHr)}
-                        stroke={tokens.hairline}
-                        strokeWidth={1}
-                      />
-                    ))}
-                    {restingHr ? (
-                      <ReferenceLine
-                        y={restingHr}
-                        stroke={tokens.hairline}
-                        strokeWidth={1}
-                        label={{
-                          value: "Resting",
-                          position: "insideTopLeft",
-                          fill: tokens.muted,
-                          fontSize: 10,
-                        }}
-                      />
-                    ) : null}
-
-                    <Area
-                      dataKey="bpm"
-                      stroke={series.strain}
-                      strokeWidth={2}
-                      fill="url(#hrFill)"
-                      isAnimationActive={false}
-                      dot={false}
-                      activeDot={{ r: 4, strokeWidth: 2, stroke: tokens.surface }}
-                    />
-
-                    <Tooltip
-                      cursor={{ stroke: tokens.hairline, strokeWidth: 1 }}
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        const point = payload[0].payload as { at: number; bpm: number };
-                        const zone = zoneForHr(point.bpm, maxHr);
-                        return (
-                          <TooltipShell
-                            title={new Date(point.at).toLocaleTimeString()}
-                            rows={[
-                              { label: "Heart rate", value: `${point.bpm} bpm`, color: zone?.color ?? series.strain },
-                              { label: "% of max", value: `${Math.round((point.bpm / maxHr) * 100)}%` },
-                            ]}
-                            footer={zone ? zone.label : "Below zone 1"}
-                          />
-                        );
-                      }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              <LiveTrace data={chartData} maxHr={maxHr} restingHr={restingHr} />
             )}
           </div>
         </Panel>

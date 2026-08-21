@@ -362,6 +362,7 @@ export const en = {
     needMet: "Need met · {performance}% performance",
     time: "Time",
     correlationDetail: "Correlation of {r} across {nights} nights — sleep performance explains about {variance}% of the variation in your recovery score.",
+    correlationThin: "Needs a couple more weeks of nights before the relationship means anything.",
   },
 
   livePage: {

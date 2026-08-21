@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createWritableClient } from "@/server/supabase";
+import { googleFields, provisionViewer } from "@/server/auth";
+import { syncLocaleCookie } from "@/server/locale";
 
 export const runtime = "nodejs";
 
@@ -25,11 +27,26 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createWritableClient();
-  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
   if (exchangeError) {
     return NextResponse.redirect(
       new URL(`/sign-in?error=${encodeURIComponent(exchangeError.message)}`, url),
     );
+  }
+
+  // Creating the profile row, minting a handle and reading the stored language
+  // all happen here, once, rather than on every subsequent page render. A
+  // failure is not fatal: `getViewer` repairs the row on the next request.
+  if (data.user) {
+    try {
+      const viewer = await provisionViewer(
+        data.user.id,
+        googleFields(data.user.user_metadata as Record<string, unknown> | undefined, data.user.email),
+      );
+      if (viewer) await syncLocaleCookie(viewer.locale);
+    } catch (provisionError) {
+      console.error("Could not provision profile on sign-in:", provisionError);
+    }
   }
 
   // Only ever redirect to a path on this origin: `next` arrives from the query

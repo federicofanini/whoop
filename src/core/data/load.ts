@@ -1,62 +1,110 @@
-import { and, desc, eq, gte } from "drizzle-orm";
-import { getDb, isDbConfigured, schema } from "@/core/db";
-import type { DashboardData, DayRecord, SleepRecord, WorkoutRecord } from "@/core/analytics/types";
+import { cache } from "react";
+import { fetchAccount, fetchCycles, fetchRecoveries, fetchSleeps, fetchWorkouts } from "./tables";
+import type {
+  DashboardData,
+  DayRecord,
+  SleepRecord,
+  UserSummary,
+  WorkoutRecord,
+} from "@/core/analytics/types";
+import { schema } from "@/core/db";
 
 /**
- * Loads one WHOOP member's history straight from Postgres.
+ * Assembles one WHOOP member's history from the per-table reads.
  *
- * Pure and framework-free: no session lookup, no request cache, no demo
- * fallback. Those are policy decisions that belong to whatever is calling —
+ * Pure and framework-free apart from the request cache: no session lookup, no
+ * demo fallback. Those are policy decisions that belong to whatever is calling —
  * a page, a CLI command, an export job — not to the data layer.
  *
- * Callers must authorise first: this function trusts its `userId` argument.
+ * Callers must authorise first: everything here trusts its `userId` argument.
+ *
+ * Three depths are exposed rather than one, because the tables have very
+ * different costs and the UI does not need them all at the same moment:
+ *
+ *   core   — cycles + recoveries. Strain, recovery score, HRV, resting HR.
+ *   vitals — core + sleeps. Everything the analytics engine reads.
+ *   all    — vitals + workouts, which only the strain bar tooltip needs.
+ *
+ * A section awaiting `core` renders without waiting for the sleep scan, and a
+ * section awaiting `vitals` renders without waiting for workouts. The queries
+ * themselves all run concurrently, so the deepest slice is no slower than the
+ * single combined read it replaced.
+ */
+
+/** Cycles + recoveries: the smallest useful slice. */
+export const loadCoreDays = cache(
+  async (userId: number, days = 180): Promise<DayRecord[]> => {
+    const [cycles, recoveries] = await Promise.all([
+      fetchCycles(userId, days),
+      fetchRecoveries(userId, days),
+    ]);
+    return buildDays(cycles, recoveries, [], []);
+  },
+);
+
+/** Core plus sleeps — everything `core/analytics` reads. */
+export const loadVitalsDays = cache(
+  async (userId: number, days = 180): Promise<DayRecord[]> => {
+    const [cycles, recoveries, sleeps] = await Promise.all([
+      fetchCycles(userId, days),
+      fetchRecoveries(userId, days),
+      fetchSleeps(userId, days),
+    ]);
+    return buildDays(cycles, recoveries, sleeps, []);
+  },
+);
+
+/** The complete history, workouts included. */
+export const loadAllDays = cache(async (userId: number, days = 180): Promise<DayRecord[]> => {
+  const [cycles, recoveries, sleeps, workouts] = await Promise.all([
+    fetchCycles(userId, days),
+    fetchRecoveries(userId, days),
+    fetchSleeps(userId, days),
+    fetchWorkouts(userId, days),
+  ]);
+  return buildDays(cycles, recoveries, sleeps, workouts);
+});
+
+/** Name, weight and max heart rate. One indexed row, no metric scan. */
+export const loadUserSummary = cache(async (userId: number): Promise<UserSummary | null> => {
+  const account = await fetchAccount(userId);
+  if (!account) return null;
+  return {
+    firstName: account.firstName,
+    maxHeartRate: account.maxHeartRate ?? 190,
+    weightKilogram: account.weightKilogram,
+    demo: false,
+  };
+});
+
+/**
+ * The whole dashboard in one object.
+ *
+ * Kept for callers outside the request lifecycle — the CLI, the export job, the
+ * friend snapshots — which have no reason to stream anything and want a single
+ * value. Pages should reach for the slices above instead.
  */
 export async function loadDashboardForUser(
   userId: number,
   days = 180,
 ): Promise<DashboardData | null> {
-  if (!isDbConfigured()) return null;
-  return loadFromDatabase(userId, days);
+  const [user, dayRecords] = await Promise.all([loadUserSummary(userId), loadAllDays(userId, days)]);
+  if (!user) return null;
+  return { user, days: dayRecords };
 }
 
-async function loadFromDatabase(userId: number, dayCount: number): Promise<DashboardData | null> {
-  const db = getDb();
-
-  const accounts = await db
-    .select()
-    .from(schema.accounts)
-    .where(eq(schema.accounts.userId, userId))
-    .limit(1);
-  const account = accounts[0];
-  if (!account) return null;
-
-  const since = new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000);
-
-  // Every one of these is scoped by user id as well as by date. Once a second
-  // person can link an account, a query filtered only by date returns both
-  // members' rows and silently blends two people's physiology into one chart.
-  const [cycleRows, recoveryRows, sleepRows, workoutRows] = await Promise.all([
-    db
-      .select()
-      .from(schema.cycles)
-      .where(and(eq(schema.cycles.userId, userId), gte(schema.cycles.start, since)))
-      .orderBy(desc(schema.cycles.start)),
-    db.select().from(schema.recoveries).where(eq(schema.recoveries.userId, userId)),
-    db
-      .select()
-      .from(schema.sleeps)
-      .where(and(eq(schema.sleeps.userId, userId), gte(schema.sleeps.start, since))),
-    db
-      .select()
-      .from(schema.workouts)
-      .where(and(eq(schema.workouts.userId, userId), gte(schema.workouts.start, since))),
-  ]);
-
+function buildDays(
+  cycleRows: schema.Cycle[],
+  recoveryRows: schema.Recovery[],
+  sleepRows: schema.Sleep[],
+  workoutRows: schema.Workout[],
+): DayRecord[] {
   const recoveryByCycle = new Map(recoveryRows.map((r) => [r.cycleId, r]));
   const sleepById = new Map(sleepRows.map((s) => [s.id, s]));
 
-  // Workouts belong to whichever cycle contains their start time.
   const sortedCycles = [...cycleRows].sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  // Workouts belong to whichever cycle contains their start time.
   const workoutsByCycle = new Map<number, WorkoutRecord[]>();
   for (const workout of workoutRows) {
     const cycle = findContainingCycle(sortedCycles, workout.start);
@@ -66,7 +114,7 @@ async function loadFromDatabase(userId: number, dayCount: number): Promise<Dashb
     workoutsByCycle.set(cycle.id, list);
   }
 
-  const days: DayRecord[] = sortedCycles.map((cycle) => {
+  return sortedCycles.map((cycle) => {
     const recovery = recoveryByCycle.get(cycle.id);
     const sleepRow = recovery?.sleepId ? sleepById.get(recovery.sleepId) : undefined;
 
@@ -89,16 +137,6 @@ async function loadFromDatabase(userId: number, dayCount: number): Promise<Dashb
       workouts: workoutsByCycle.get(cycle.id) ?? [],
     };
   });
-
-  return {
-    user: {
-      firstName: account.firstName,
-      maxHeartRate: account.maxHeartRate ?? 190,
-      weightKilogram: account.weightKilogram,
-      demo: false,
-    },
-    days,
-  };
 }
 
 function findContainingCycle(cycles: schema.Cycle[], at: Date): schema.Cycle | null {

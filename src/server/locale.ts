@@ -16,22 +16,23 @@ import { getViewer } from "./auth";
 /**
  * Which language to render in, resolved once per request.
  *
- * Three sources, most explicit first:
+ * Two sources, most explicit first:
  *
- *   1. the locale cookie — an explicit click on the switcher, this device;
- *   2. the signed-in profile — the same choice, carried to a new device;
- *   3. Accept-Language — what the browser says, for a first-time visitor.
+ *   1. the locale cookie — an explicit click on the switcher, or the stored
+ *      profile preference, which sign-in copies into the cookie;
+ *   2. Accept-Language — what the browser says, for a first-time visitor.
  *
- * A stored preference beats the browser: someone with an Italian phone who
- * chose English meant it, and should not have to choose again every visit.
+ * The profile is deliberately *not* read here. This runs before `<html lang>`
+ * can be emitted, so every millisecond it spends is a millisecond the browser
+ * has no markup at all — and a database round trip to learn a two-letter string
+ * is the worst possible thing to put in that position. `syncLocaleCookie` moves
+ * the stored preference into the cookie at sign-in instead, which gets the same
+ * "follows you to a new device" behaviour for free on every later request.
  */
 export const getLocale = cache(async (): Promise<Locale> => {
   const store = await cookies();
   const fromCookie = store.get(LOCALE_COOKIE)?.value;
   if (isLocale(fromCookie)) return fromCookie;
-
-  const viewer = await getViewer();
-  if (viewer && isLocale(viewer.locale)) return viewer.locale;
 
   const header = (await headers()).get("accept-language");
   return negotiateLocale(header) ?? DEFAULT_LOCALE;
@@ -42,6 +43,12 @@ export const getTranslator = cache(async (): Promise<Translator> => {
   return createTranslator(await getLocale());
 });
 
+const COOKIE_OPTIONS = {
+  path: "/",
+  maxAge: 365 * 24 * 60 * 60,
+  sameSite: "lax",
+} as const;
+
 /**
  * Persists a language choice.
  *
@@ -50,11 +57,7 @@ export const getTranslator = cache(async (): Promise<Translator> => {
  */
 export async function persistLocale(locale: Locale): Promise<void> {
   const store = await cookies();
-  store.set(LOCALE_COOKIE, locale, {
-    path: "/",
-    maxAge: 365 * 24 * 60 * 60,
-    sameSite: "lax",
-  });
+  store.set(LOCALE_COOKIE, locale, COOKIE_OPTIONS);
 
   if (!isDbConfigured()) return;
   const viewer = await getViewer();
@@ -64,4 +67,15 @@ export async function persistLocale(locale: Locale): Promise<void> {
     .update(schema.profiles)
     .set({ locale, updatedAt: new Date() })
     .where(eq(schema.profiles.id, viewer.profileId));
+}
+
+/**
+ * Copies a freshly signed-in member's stored language into the cookie, so that
+ * `getLocale` never has to ask the database. Call from route handlers only —
+ * Server Components cannot write cookies.
+ */
+export async function syncLocaleCookie(locale: Locale): Promise<void> {
+  const store = await cookies();
+  if (isLocale(store.get(LOCALE_COOKIE)?.value)) return;
+  store.set(LOCALE_COOKIE, locale, COOKIE_OPTIONS);
 }

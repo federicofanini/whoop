@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env bun
 /**
  * The dashboard without the dashboard.
  *
@@ -7,11 +7,11 @@
  * Next.js, React, a browser, or a running server. If the UI were deleted
  * tomorrow, this would still work.
  *
- *   npm run whoop -- status
- *   npm run whoop -- backfill --user 1001
- *   npm run whoop -- sync --all
- *   npm run whoop -- export --user 1001 --format csv --days 90 --out history.csv
- *   npm run whoop -- insights --user 1001 --locale it
+ *   bun run whoop status
+ *   bun run whoop backfill --user 1001
+ *   bun run whoop sync --all
+ *   bun run whoop export --user 1001 --format csv --days 90 --out history.csv
+ *   bun run whoop insights --user 1001 --locale it
  */
 import { writeFileSync } from "node:fs";
 import { desc, eq } from "drizzle-orm";

@@ -1,15 +1,13 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { isDbConfigured } from "@/core/db";
 import { getViewer } from "@/server/auth";
 import { getTranslator } from "@/server/locale";
-import { loadFriendGraph } from "@/core/friends/queries";
-import { loadFriendSnapshots } from "@/core/friends/summary";
 import type { Translator } from "@/core/i18n";
 import { Panel, PanelHeader, PageHeader } from "@/components/ui/panel";
 import { AddFriendForm } from "@/components/friends/add-friend-form";
-import { FriendCard } from "@/components/friends/friend-card";
-import { IncomingRequestRow, OutgoingRequestRow } from "@/components/friends/request-rows";
 import { HandleField } from "./handle-field";
+import { FriendList, FriendListSkeleton, IncomingRequests, OutgoingRequests } from "./_sections";
 
 export const dynamic = "force-dynamic";
 
@@ -21,13 +19,16 @@ export default async function FriendsPage() {
     return <SignedOut t={t} dbReady={isDbConfigured()} />;
   }
 
-  const graph = await loadFriendGraph(viewer.profileId);
-  const snapshots = await loadFriendSnapshots(graph.friends);
-
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow={t("friends.eyebrow")} title={t("friends.title")} description={t("friends.lead")} />
+      <PageHeader
+        eyebrow={t("friends.eyebrow")}
+        title={t("friends.title")}
+        description={t("friends.lead")}
+      />
 
+      {/* Both of these are ready the moment the session is — no graph, no
+          history — so they render with the page rather than after it. */}
       <div className="grid gap-5 lg:grid-cols-[1.1fr_1fr]">
         <Panel>
           <PanelHeader title={t("friends.invite")} subtitle={t("friends.inviteSub")} />
@@ -53,68 +54,17 @@ export default async function FriendsPage() {
         </Panel>
       </div>
 
-      {graph.incoming.length > 0 ? (
-        <Panel>
-          <PanelHeader
-            title={t("friends.waitingOnYou", { count: graph.incoming.length })}
-            subtitle={t("friends.waitingOnYouSub")}
-          />
-          <ul className="space-y-3">
-            {graph.incoming.map((request) => (
-              <IncomingRequestRow
-                key={request.id}
-                request={request}
-                labels={{
-                  wants: t("friends.wantsToShare"),
-                  approve: t("friends.approve"),
-                  decline: t("friends.decline"),
-                }}
-              />
-            ))}
-          </ul>
-        </Panel>
-      ) : null}
+      <Suspense fallback={null}>
+        <IncomingRequests />
+      </Suspense>
 
-      <section>
-        <h2 className="mb-4 text-[15px] font-semibold tracking-tight text-ink">
-          {t("friends.sharingWith")}
-          {graph.friends.length > 0 ? ` (${graph.friends.length})` : ""}
-        </h2>
+      <Suspense fallback={<FriendListSkeleton />}>
+        <FriendList />
+      </Suspense>
 
-        {snapshots.length === 0 ? (
-          <Panel>
-            <p className="text-[13px] leading-relaxed text-muted">{t("friends.nobodyYet")}</p>
-          </Panel>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {snapshots.map((snapshot) => (
-              <FriendCard
-                key={snapshot.profile.profileId}
-                snapshot={snapshot}
-                t={t}
-                friendshipId={
-                  graph.friends.find((f) => f.profileId === snapshot.profile.profileId)?.friendshipId
-                }
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {graph.outgoing.length > 0 ? (
-        <Panel>
-          <PanelHeader title={t("friends.sentNotApproved")} />
-          <ul className="space-y-3">
-            {graph.outgoing.map((request) => (
-              <OutgoingRequestRow
-                key={request.id}
-                request={request}
-                labels={{ waiting: t("friends.waitingApproval"), withdraw: t("friends.withdraw") }}
-              />
-            ))}
-          </ul>
-        </Panel>
-      ) : null}
+      <Suspense fallback={null}>
+        <OutgoingRequests />
+      </Suspense>
     </div>
   );
 }

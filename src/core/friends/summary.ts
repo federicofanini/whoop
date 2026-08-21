@@ -1,6 +1,6 @@
-import type { DashboardData, DayRecord } from "@/core/analytics/types";
+import type { DayRecord } from "@/core/analytics/types";
 import { asleepMilli } from "@/core/analytics/sleep";
-import { loadDashboardForUser } from "@/core/data/load";
+import { loadVitalsDays } from "@/core/data/load";
 import { displayName, type FriendProfile } from "./queries";
 
 /**
@@ -37,8 +37,7 @@ function mean(values: number[]): number | null {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-export function summarizeForFriend(profile: FriendProfile, data: DashboardData | null): FriendSnapshot {
-  const days = data?.days ?? [];
+export function summarizeForFriend(profile: FriendProfile, days: DayRecord[]): FriendSnapshot {
   const today = days[days.length - 1] ?? null;
   const week = days.slice(-7);
 
@@ -65,20 +64,20 @@ export function summarizeForFriend(profile: FriendProfile, data: DashboardData |
 }
 
 /**
- * Loads every friend's snapshot.
+ * One friend's snapshot.
  *
- * A 30-day window rather than the dashboard's 180: the card shows a fortnight of
- * bars and a weekly mean, and pulling six months per friend to render fourteen
- * bars would make the page cost scale with the size of the friend list.
+ * A 30-day window rather than the dashboard's own, and the vitals slice rather
+ * than the full one: the card shows a fortnight of bars and a weekly mean, so
+ * pulling six months and a workout history per friend would make the page cost
+ * scale with the size of the friend list for numbers nobody sees.
  */
+export async function loadFriendSnapshot(profile: FriendProfile): Promise<FriendSnapshot> {
+  // A friend who has signed in but never linked a strap has nothing to load.
+  const days = profile.whoopUserId ? await loadVitalsDays(profile.whoopUserId, 30) : [];
+  return summarizeForFriend(profile, days);
+}
+
+/** Every friend at once, for callers that cannot stream them one by one. */
 export async function loadFriendSnapshots(friends: FriendProfile[]): Promise<FriendSnapshot[]> {
-  return Promise.all(
-    friends.map(async (profile) => {
-      // A friend who has signed in but never linked a strap has nothing to load.
-      const data = profile.whoopUserId
-        ? await loadDashboardForUser(profile.whoopUserId, 30)
-        : null;
-      return summarizeForFriend(profile, data);
-    }),
-  );
+  return Promise.all(friends.map(loadFriendSnapshot));
 }

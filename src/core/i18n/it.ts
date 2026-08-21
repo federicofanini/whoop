@@ -374,6 +374,7 @@ export const it: Dictionary = {
     needMet: "Fabbisogno coperto · {performance}% di performance",
     time: "Tempo",
     correlationDetail: "Correlazione di {r} su {nights} notti — il sonno spiega circa il {variance}% della variazione del tuo punteggio di recovery.",
+    correlationThin: "Servono ancora un paio di settimane di notti prima che la relazione significhi qualcosa.",
   },
 
   livePage: {

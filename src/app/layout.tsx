@@ -1,10 +1,10 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
 import { AppNav } from "@/components/ui/nav";
-import { getViewer } from "@/server/auth";
+import { AccountLinkSkeleton } from "@/components/nav/account-link";
+import { AccountSlot, DemoSlot, FriendsBadge } from "@/components/nav/slots";
 import { getLocale, getTranslator } from "@/server/locale";
-import { loadFriendGraph } from "@/core/friends/queries";
-import { loadViewerDashboard } from "@/server/dashboard";
 import { ThemeScript } from "@/components/ui/theme-script";
 import { I18nProvider } from "@/components/i18n-provider";
 import { getDictionary } from "@/core/i18n";
@@ -53,14 +53,18 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+/**
+ * The shell, and nothing that needs a query.
+ *
+ * A layout is the outermost thing React renders, so anything awaited here is
+ * awaited before the browser receives a single byte of the document — no
+ * streaming, no early stylesheet or font fetch, no skeletons. That is why the
+ * only things resolved up front are the locale and its dictionary, both of
+ * which come from a cookie and a static import. Everything the header needs
+ * from the database is streamed in as a slot.
+ */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [locale, t, viewer] = await Promise.all([getLocale(), getTranslator(), getViewer()]);
-
-  // The nav badge needs to know whether real data is linked; the layout is the
-  // one place that is true for every page.
-  const { user } = await loadViewerDashboard();
-  const graph = viewer ? await loadFriendGraph(viewer.profileId) : null;
-  const pending = graph?.incoming.length ?? 0;
+  const [locale, t] = await Promise.all([getLocale(), getTranslator()]);
 
   return (
     <html
@@ -74,11 +78,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-dvh antialiased">
         <I18nProvider locale={locale} dict={getDictionary(locale)}>
           <AppNav
-            demo={user.demo}
             locale={locale}
-            handle={viewer?.handle ?? null}
-            signedIn={Boolean(viewer)}
-            pendingRequests={pending}
+            demoSlot={
+              <Suspense fallback={null}>
+                <DemoSlot />
+              </Suspense>
+            }
+            friendsBadge={
+              <Suspense fallback={null}>
+                <FriendsBadge />
+              </Suspense>
+            }
+            accountSlot={
+              <Suspense fallback={<AccountLinkSkeleton />}>
+                <AccountSlot />
+              </Suspense>
+            }
           />
           <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
           <footer className="mx-auto max-w-7xl px-4 pb-10 pt-4 sm:px-6">
