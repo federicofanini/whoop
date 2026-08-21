@@ -25,11 +25,28 @@ export function median(values: number[]): number {
  * Returns 0 rather than Infinity when the baseline has no spread — a flat
  * baseline means "nothing to compare against", not "infinitely unusual".
  */
+/**
+ * How far `value` sits from a baseline, in standard deviations.
+ *
+ * A zero standard deviation needs care. Returning 0 — "no signal" — is right
+ * when the value matches the flat history, and badly wrong when it does not: a
+ * baseline that never moved and then moved is the *strongest* possible
+ * departure, not the weakest. Since the true z-score there is infinite, and an
+ * infinity would propagate into a priority, a sort and eventually a rendered
+ * number, it is clamped to a value beyond any threshold the app tests for.
+ */
 export function zScore(value: number, baseline: number[]): number {
   const sd = stdev(baseline);
-  if (sd === 0) return 0;
+  if (sd === 0) {
+    const delta = value - mean(baseline);
+    if (delta === 0) return 0;
+    return delta > 0 ? DEGENERATE_Z : -DEGENERATE_Z;
+  }
   return (value - mean(baseline)) / sd;
 }
+
+/** Past every threshold in the app, while staying a finite, sortable number. */
+const DEGENERATE_Z = 4;
 
 /**
  * Exponentially weighted moving average.

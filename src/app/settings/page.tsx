@@ -2,6 +2,9 @@ import Link from "next/link";
 import { isDbConfigured } from "@/core/db";
 import { isWhoopConfigured } from "@/core/whoop/oauth";
 import { getViewer } from "@/server/auth";
+import { sharedSlotAvailability } from "@/core/whoop/credentials";
+import { loadOwnKeySummary } from "@/core/whoop/key-summary";
+import { WhoopKeys } from "./whoop-keys";
 import { getTranslator } from "@/server/locale";
 import { isSupabaseConfigured } from "@/server/supabase";
 import { loadViewerDashboard } from "@/server/dashboard";
@@ -19,6 +22,10 @@ export default async function SettingsPage({
   const t = await getTranslator();
   const { days } = await loadViewerDashboard();
   const viewer = await getViewer();
+
+  // Slot accounting and stored keys drive the credentials panel below.
+  const slots = await sharedSlotAvailability(viewer?.profileId);
+  const ownKeys = viewer ? await loadOwnKeySummary(viewer.profileId) : null;
 
   const whoopReady = isWhoopConfigured();
   const dbReady = isDbConfigured();
@@ -116,6 +123,16 @@ export default async function SettingsPage({
           </p>
         )}
       </Panel>
+
+      {viewer ? (
+        <WhoopKeys
+          hasOwnKeys={Boolean(ownKeys?.clientId)}
+          maskedClientId={ownKeys?.clientId ?? null}
+          remaining={slots.held ? slots.remaining + 1 : slots.remaining}
+          limit={slots.limit}
+          locked={!slots.held && slots.remaining === 0 && !ownKeys?.clientId}
+        />
+      ) : null}
 
       <Panel>
         <PanelHeader

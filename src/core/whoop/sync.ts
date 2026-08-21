@@ -1,7 +1,8 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "@/core/db";
 import { WhoopAuthError, WhoopClient } from "./client";
 import { refreshTokens } from "./oauth";
+import { credentialsForAccount } from "./credentials";
 import type {
   WhoopBodyMeasurement,
   WhoopCycle,
@@ -37,12 +38,54 @@ export async function getAuthorizedClient(userId?: number): Promise<{
   client: WhoopClient;
   account: schema.Account;
 }> {
-  const db = getDb();
   let account = await getAccount(userId);
   if (!account) throw new WhoopAuthError("No WHOOP account linked yet");
 
   if (account.expiresAt.getTime() - REFRESH_MARGIN_MS <= Date.now()) {
-    const tokens = await refreshTokens(account.refreshToken);
+    account = await refreshAccountTokens(account);
+  }
+
+  return { client: new WhoopClient(account.accessToken), account };
+}
+
+/**
+ * Refreshes an account's tokens without letting two refreshes clobber each other.
+ *
+ * WHOOP rotates the refresh token on every use, so a naive implementation has a
+ * race that silently unlinks the account: two requests both see an expired
+ * token, both refresh, and the slower response overwrites the newer refresh
+ * token with one that WHOOP has already retired. The next refresh then fails
+ * with a 401 that looks like the member revoked access.
+ *
+ * Two layers stop that:
+ *
+ *  1. An in-process promise map, so concurrent callers *in this instance* share
+ *     one round trip. This is the common case and the cheap fix.
+ *  2. A compare-and-swap on the write: the update only lands if the refresh
+ *     token still matches the one we started from. Across instances — which is
+ *     how this actually runs in production — a mutex is worthless, so the
+ *     database has to be the thing that arbitrates. A losing writer re-reads and
+ *     takes the winner's tokens.
+ */
+const inFlight = new Map<number, Promise<schema.Account>>();
+
+async function refreshAccountTokens(account: schema.Account): Promise<schema.Account> {
+  const existing = inFlight.get(account.userId);
+  if (existing) return existing;
+
+  const attempt = (async (): Promise<schema.Account> => {
+    const db = getDb();
+    const credentials = await credentialsForAccount(account.profileId, account.credentialSource);
+    if (!credentials) {
+      throw new WhoopAuthError(
+        account.credentialSource === "own"
+          ? "This account was linked with your own WHOOP app, whose credentials are no longer available. Re-add them in settings."
+          : "The shared WHOOP app is not configured on this deployment.",
+      );
+    }
+
+    const tokens = await refreshTokens(account.refreshToken, credentials);
+
     const updated = await db
       .update(schema.accounts)
       .set({
@@ -52,12 +95,29 @@ export async function getAuthorizedClient(userId?: number): Promise<{
         expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
         updatedAt: new Date(),
       })
-      .where(eq(schema.accounts.userId, account.userId))
+      .where(
+        and(
+          eq(schema.accounts.userId, account.userId),
+          // The guard: someone else refreshing first makes this match nothing.
+          eq(schema.accounts.refreshToken, account.refreshToken),
+        ),
+      )
       .returning();
-    account = updated[0];
-  }
 
-  return { client: new WhoopClient(account.accessToken), account };
+    if (updated[0]) return updated[0];
+
+    // Lost the race. The winner's tokens are the valid ones.
+    const current = await getAccount(account.userId);
+    if (!current) throw new WhoopAuthError("Account disappeared while refreshing tokens");
+    return current;
+  })();
+
+  inFlight.set(account.userId, attempt);
+  try {
+    return await attempt;
+  } finally {
+    inFlight.delete(account.userId);
+  }
 }
 
 export async function upsertProfile(client: WhoopClient, userId: number) {

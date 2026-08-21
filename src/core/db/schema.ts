@@ -34,6 +34,29 @@ export const profiles = pgTable("profiles", {
   avatarUrl: text("avatar_url"),
   /** "en" | "it" — remembered so the choice survives a new device. */
   locale: text("locale").$type<Locale>().notNull().default("en"),
+
+  /*
+   * WHOOP credentials.
+   *
+   * A WHOOP developer app may only have ten users while it is in development,
+   * which is a hard platform limit and not something the app can raise. So there
+   * are two ways to connect: take one of the shared app's ten slots, or bring
+   * your own developer app.
+   */
+
+  /**
+   * Which of the shared app's slots this profile holds, or null for none.
+   *
+   * A slot *number* with a unique constraint rather than a boolean flag: the
+   * database then refuses to hand the same slot to two people, which is what
+   * makes claiming safe without a transaction or a lock.
+   */
+  sharedSlot: integer("shared_slot").unique(),
+
+  /** Set only when the member brought their own WHOOP developer app. */
+  whoopClientId: text("whoop_client_id"),
+  /** AES-256-GCM, via core/crypto. Never stored or logged in plaintext. */
+  whoopClientSecret: text("whoop_client_secret"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -51,6 +74,15 @@ export const accounts = pgTable("accounts", {
   userId: integer("user_id").primaryKey(),
   /** The profile that linked this strap. Null only for rows predating auth. */
   profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "cascade" }),
+  /**
+   * Which credentials linked this account: the shared app or the member's own.
+   *
+   * Recorded rather than re-derived, because refreshing a token requires the
+   * *same* client that issued it. A member who links via a shared slot and later
+   * adds their own keys must keep refreshing against the shared app until they
+   * reconnect, or every refresh fails with an opaque 401.
+   */
+  credentialSource: text("credential_source").$type<"shared" | "own">().notNull().default("shared"),
   email: text("email"),
   firstName: text("first_name"),
   lastName: text("last_name"),
