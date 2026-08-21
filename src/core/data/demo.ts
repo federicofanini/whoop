@@ -54,9 +54,14 @@ function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function generateDemoData(): DashboardData {
+/**
+ * @param seed Overridable so a seeding script can generate two members whose
+ *   histories differ. Defaults to the fixed constant, which is what keeps every
+ *   render of every page identical.
+ */
+export function generateDemoData(seed: number = SEED): DashboardData {
   // Seeded per call, so every render of every page produces the identical dataset.
-  const rng = makeRng(SEED);
+  const rng = makeRng(seed);
   const gaussian = makeGaussian(rng);
 
   const days: DayRecord[] = [];

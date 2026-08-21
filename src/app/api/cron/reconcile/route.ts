@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { isDbConfigured } from "@/core/db";
 import { getAuthorizedClient, lastSyncedAt, listAccountIds, syncSince } from "@/core/whoop/sync";
@@ -16,8 +17,27 @@ export const maxDuration = 300;
  * their own sync, and they are not necessarily around to trigger one.
  */
 export async function GET(request: NextRequest) {
+  // Fail closed. An unset secret used to skip the check entirely, which left a
+  // public endpoint that re-syncs every linked account on demand — a free way
+  // to burn the WHOOP rate limit for everyone, from anywhere.
   const secret = process.env.CRON_SECRET;
-  if (secret && request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secret) {
+    return NextResponse.json(
+      { error: "CRON_SECRET is not set; refusing to run an unauthenticated reconcile" },
+      { status: 503 },
+    );
+  }
+
+  const offered = request.headers.get("authorization") ?? "";
+  const expected = `Bearer ${secret}`;
+  // Constant-time: a length-independent comparison here leaks the secret to
+  // anyone willing to time a few thousand requests.
+  const offeredBytes = Buffer.from(offered);
+  const expectedBytes = Buffer.from(expected);
+  const authorized =
+    offeredBytes.length === expectedBytes.length && timingSafeEqual(offeredBytes, expectedBytes);
+
+  if (!authorized) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

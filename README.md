@@ -149,6 +149,72 @@ recovery 40%  strain 17.3  hrv 40ms (baseline 42)  load 1.06x
   settimana non lo azzera.
 ```
 
+## Connecting WHOOP: ten shared slots, then your own app
+
+A WHOOP developer app in development mode is limited to **ten users**. That is a
+platform cap, not a setting — the eleventh person to authorise simply fails, and
+the failure does not explain itself. So the cap is modelled explicitly rather
+than left to surface as a bug report:
+
+- The first ten members claim a numbered slot on this deployment's shared app.
+- Everyone after that brings their own WHOOP developer app — client id and
+  secret, pasted into settings.
+- Anyone may bring their own at any time, which **frees their slot** for someone
+  who has no alternative.
+
+Slots are numbered rather than counted, and the number carries a unique
+constraint. Two people claiming at once means one `UPDATE` wins and the other
+hits the constraint and retries against the next free number — correct across
+processes, which an in-memory lock would not be on a platform that runs many
+instances at once.
+
+Member-supplied secrets are encrypted with AES-256-GCM before they are stored,
+keyed on `CREDENTIALS_SECRET`. The client id is not secret — it travels in the
+authorize URL — so settings shows it in full; the secret is never read back,
+only replaced.
+
+An account records **which app linked it**. A refresh token is only valid for
+the client that issued it, so someone who links via a shared slot and later adds
+their own keys keeps refreshing against the shared app until they reconnect.
+Re-deriving that at refresh time instead would fail with an opaque 401.
+
+## Tests
+
+```bash
+npm test              # 62 tests
+npm run test:coverage # statement coverage across src/core
+```
+
+The analytics are the product — every insight is downstream of them, so a wrong
+z-score produces a dashboard that is confidently wrong rather than visibly
+broken. Those get hand-built fixtures with known answers, so a failure names the
+arithmetic rather than the fixture. Alongside them: locale negotiation, number
+and duration formatting, dictionary parity between English and Italian, secret
+encryption, webhook signature verification, and handle validation.
+
+Two assertions are worth calling out because they catch whole classes of
+regression rather than single cases:
+
+- **Dictionary parity.** Every leaf key in English must exist in Italian, and no
+  Italian string may be byte-identical to its English source outside an explicit
+  allow-list of product names and units. An untranslated string cannot ship.
+- **Insight keys resolve.** Every key `generateInsights` emits is looked up in
+  both languages across several synthetic histories, and the rendered result
+  must contain no leftover `{placeholder}`. A renamed key or a params mismatch
+  fails the build rather than printing a dotted path on the dashboard.
+
+## Running it against a real database
+
+```bash
+npm run db:push   # create the schema
+npm run seed      # two members, 180 days each, an accepted friendship
+npm run whoop -- status
+```
+
+`npm run seed` writes through the same tables the sync path writes to, so the
+queries it exercises are the queries production runs. It uses fixed profile ids
+and derived record ids, which makes re-seeding idempotent.
+
 ## Signing in
 
 Two accounts, doing two different jobs:

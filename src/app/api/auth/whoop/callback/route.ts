@@ -5,6 +5,7 @@ import { exchangeCodeForTokens } from "@/core/whoop/oauth";
 import { WhoopClient } from "@/core/whoop/client";
 import type { WhoopBodyMeasurement, WhoopProfile } from "@/core/whoop/types";
 import { getViewer } from "@/server/auth";
+import { resolveCredentialsForProfile } from "@/core/whoop/credentials";
 
 export const runtime = "nodejs";
 
@@ -39,8 +40,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/sign-in?next=/settings", url));
   }
 
+  const resolved = await resolveCredentialsForProfile(viewer.profileId);
+  if (!resolved.ok) {
+    return NextResponse.redirect(new URL(`/settings?error=${resolved.reason}`, url));
+  }
+
+  // The code was issued by whichever app started the handshake; exchanging it
+  // against a different client id fails with an unhelpful invalid_grant.
+  const startedWith = request.cookies.get("whoop_oauth_source")?.value;
+  if (startedWith && startedWith !== resolved.credentials.source) {
+    return NextResponse.redirect(new URL("/settings?error=credentials_changed", url));
+  }
+
   try {
-    const tokens = await exchangeCodeForTokens(code);
+    const tokens = await exchangeCodeForTokens(code, resolved.credentials);
     const client = new WhoopClient(tokens.access_token);
 
     const profile = await client.get<WhoopProfile>("/v2/user/profile/basic");
@@ -58,6 +71,7 @@ export async function GET(request: NextRequest) {
         lastName: profile.last_name,
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
+        credentialSource: resolved.credentials.source,
         expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
         scope: tokens.scope,
         heightMeter: body?.height_meter,
@@ -73,6 +87,9 @@ export async function GET(request: NextRequest) {
           accessToken: sql`excluded.access_token`,
           refreshToken: sql`excluded.refresh_token`,
           expiresAt: sql`excluded.expires_at`,
+          // Reconnecting through a different app must move this too, or the
+          // next refresh is sent to the client that did not issue the token.
+          credentialSource: sql`excluded.credential_source`,
           scope: sql`excluded.scope`,
           email: sql`excluded.email`,
           firstName: sql`excluded.first_name`,
