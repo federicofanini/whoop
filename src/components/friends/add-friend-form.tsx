@@ -4,21 +4,10 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { sendFriendRequest, type ActionResult } from "@/app/friends/actions";
 import { normalizeHandle } from "@/core/friends/handles";
-import { resolveMessage } from "./messages";
+import { useT } from "@/components/i18n-provider";
 
-export function AddFriendForm({
-  labels,
-  dict,
-}: {
-  labels: {
-    placeholder: string;
-    field: string;
-    send: string;
-    sending: string;
-    willSend: (handle: string) => string;
-  };
-  dict: Record<string, string>;
-}) {
+export function AddFriendForm() {
+  const t = useT();
   const [state, action] = useActionState<ActionResult | null, FormData>(sendFriendRequest, null);
   const [value, setValue] = useState("");
 
@@ -40,40 +29,41 @@ export function AddFriendForm({
             name="handle"
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            placeholder={labels.placeholder}
+            placeholder={t("friends.invitePlaceholder")}
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            aria-label={labels.field}
-            className="w-full  border border-hairline bg-surface-2 py-2.5 pl-7 pr-3.5 text-[14px] text-ink placeholder:text-muted focus:border-baseline focus:outline-none"
+            aria-label={t("friends.theirHandle")}
+            className="w-full border border-hairline bg-surface-2 py-2.5 pl-7 pr-3.5 text-[14px] text-ink placeholder:text-muted focus:border-baseline focus:outline-none"
           />
         </div>
-        <SubmitButton send={labels.send} sending={labels.sending} />
+        <SubmitButton />
       </div>
 
       {preview && preview !== value.replace(/^@/, "") ? (
-        <p className="text-[12px] text-muted">{labels.willSend(preview)}</p>
+        <p className="text-[12px] text-muted">{t("friends.willSendTo", { handle: preview })}</p>
       ) : null}
 
       {state ? (
         <p className={`text-[13px] ${state.ok ? "text-good" : "text-critical"}`}>
           <span aria-hidden>{state.ok ? "✓ " : "✕ "}</span>
-          {resolveMessage(dict, state)}
+          {t(state.key, state.handle ? { handle: state.handle } : undefined)}
         </p>
       ) : null}
     </form>
   );
 }
 
-function SubmitButton({ send, sending }: { send: string; sending: string }) {
+function SubmitButton() {
+  const t = useT();
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       disabled={pending}
-      className="shrink-0  bg-ink px-5 py-2.5 text-[14px] font-semibold text-plane transition-opacity hover:opacity-90 disabled:opacity-50"
+      className="shrink-0 bg-[var(--color-accent)] px-5 py-2.5 text-[14px] font-medium text-[var(--color-accent-ink)] transition-opacity hover:opacity-90 disabled:opacity-50"
     >
-      {pending ? sending : send}
+      {pending ? t("friends.sending") : t("friends.send")}
     </button>
   );
 }

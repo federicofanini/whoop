@@ -35,7 +35,12 @@ export interface Viewer {
  * page that decides whose heart-rate data to render, that difference matters.
  */
 export const getViewer = cache(async (): Promise<Viewer | null> => {
-  if (!isSupabaseConfigured() || !isDbConfigured()) return null;
+  if (!isDbConfigured()) return null;
+
+  const impersonated = await devViewer();
+  if (impersonated) return impersonated;
+
+  if (!isSupabaseConfigured()) return null;
 
   const supabase = await createReadOnlyClient();
   const { data, error } = await supabase.auth.getUser();
@@ -85,6 +90,56 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     whoopUserId: rows[0]?.whoopUserId ?? null,
   };
 });
+
+/**
+ * Signs in as a seeded profile, for local development only.
+ *
+ * Supabase Auth needs a real hosted project, which makes every signed-in
+ * surface — friends, sharing, the credentials panel — unreachable while working
+ * offline or on a fresh clone. `npm run seed` writes profiles; this lets you be
+ * one of them.
+ *
+ * Guarded on NODE_ENV rather than on the variable alone, so a production build
+ * ignores it even if the variable is set in the environment by accident. That
+ * is the whole safety argument: the bypass cannot exist in a production bundle.
+ */
+async function devViewer(): Promise<Viewer | null> {
+  if (process.env.NODE_ENV === "production") return null;
+
+  const profileId = process.env.DEV_VIEWER_PROFILE_ID;
+  if (!profileId) return null;
+
+  const rows = await getDb()
+    .select({
+      id: schema.profiles.id,
+      handle: schema.profiles.handle,
+      email: schema.profiles.email,
+      fullName: schema.profiles.fullName,
+      avatarUrl: schema.profiles.avatarUrl,
+      locale: schema.profiles.locale,
+      whoopUserId: schema.accounts.userId,
+    })
+    .from(schema.profiles)
+    .leftJoin(schema.accounts, eq(schema.accounts.profileId, schema.profiles.id))
+    .where(eq(schema.profiles.id, profileId))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) {
+    console.warn(`DEV_VIEWER_PROFILE_ID ${profileId} matches no profile — run npm run seed`);
+    return null;
+  }
+
+  return {
+    profileId: row.id,
+    handle: row.handle ?? `member.${row.id.slice(0, 8)}`,
+    email: row.email,
+    fullName: row.fullName,
+    avatarUrl: row.avatarUrl,
+    locale: row.locale,
+    whoopUserId: row.whoopUserId ?? null,
+  };
+}
 
 /** The viewer's WHOOP user id, or null when no strap is linked. */
 export async function getViewerWhoopUserId(): Promise<number | null> {

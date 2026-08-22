@@ -1,4 +1,4 @@
-import { displayName, type FriendProfile } from "@/core/friends/queries";
+import { displayName, type FriendProfile } from "@/core/friends/types";
 import { cn } from "@/lib/utils";
 
 /**

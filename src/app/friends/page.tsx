@@ -2,9 +2,9 @@ import Link from "next/link";
 import { isDbConfigured } from "@/core/db";
 import { getViewer } from "@/server/auth";
 import { getTranslator } from "@/server/locale";
+import type { Translator } from "@/core/i18n";
 import { loadFriendGraph } from "@/core/friends/queries";
 import { loadFriendSnapshots } from "@/core/friends/summary";
-import type { Translator } from "@/core/i18n";
 import { Panel, PanelHeader, PageHeader } from "@/components/ui/panel";
 import { AddFriendForm } from "@/components/friends/add-friend-form";
 import { FriendCard } from "@/components/friends/friend-card";
@@ -31,25 +31,12 @@ export default async function FriendsPage() {
       <div className="grid gap-5 lg:grid-cols-[1.1fr_1fr]">
         <Panel>
           <PanelHeader title={t("friends.invite")} subtitle={t("friends.inviteSub")} />
-          <AddFriendForm
-            labels={{
-              placeholder: t("friends.invitePlaceholder"),
-              field: t("friends.theirHandle"),
-              send: t("friends.send"),
-              sending: t("friends.sending"),
-              willSend: (handle: string) => t("friends.willSendTo", { handle }),
-            }}
-            dict={messageDict(t)}
-          />
+          <AddFriendForm />
         </Panel>
 
         <Panel>
           <PanelHeader title={t("friends.yourHandle")} subtitle={t("friends.yourHandleSub")} />
-          <HandleField
-            handle={viewer.handle}
-            labels={{ field: t("friends.yourHandle"), rename: t("friends.rename") }}
-            dict={messageDict(t)}
-          />
+          <HandleField handle={viewer.handle} />
         </Panel>
       </div>
 
@@ -61,15 +48,7 @@ export default async function FriendsPage() {
           />
           <ul className="space-y-3">
             {graph.incoming.map((request) => (
-              <IncomingRequestRow
-                key={request.id}
-                request={request}
-                labels={{
-                  wants: t("friends.wantsToShare"),
-                  approve: t("friends.approve"),
-                  decline: t("friends.decline"),
-                }}
-              />
+              <IncomingRequestRow key={request.id} request={request} />
             ))}
           </ul>
         </Panel>
@@ -106,11 +85,7 @@ export default async function FriendsPage() {
           <PanelHeader title={t("friends.sentNotApproved")} />
           <ul className="space-y-3">
             {graph.outgoing.map((request) => (
-              <OutgoingRequestRow
-                key={request.id}
-                request={request}
-                labels={{ waiting: t("friends.waitingApproval"), withdraw: t("friends.withdraw") }}
-              />
+              <OutgoingRequestRow key={request.id} request={request} />
             ))}
           </ul>
         </Panel>
@@ -124,24 +99,6 @@ export default async function FriendsPage() {
  * assume the language the form was rendered in. The client form needs those
  * keys resolved, so the strings travel with it.
  */
-function messageDict(t: Translator): Record<string, string> {
-  const keys = [
-    "friends.sent",
-    "friends.renamed",
-    "friends.reverseAccepted",
-    "friends.error.tooShort",
-    "friends.error.charset",
-    "friends.error.self",
-    "friends.error.already",
-    "friends.error.pending",
-    "friends.error.taken",
-    "friends.error.noDatabase",
-    "friends.error.signedOut",
-  ];
-  // `{handle}` is left in place: the client interpolates it once it knows which
-  // handle the member actually typed.
-  return Object.fromEntries(keys.map((key) => [key, t(key)]));
-}
 
 /**
  * Friends is the one part of the dashboard demo data cannot stand in for — it

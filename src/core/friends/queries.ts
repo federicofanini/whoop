@@ -1,36 +1,9 @@
 import { and, eq, or, sql } from "drizzle-orm";
 import { getDb, isDbConfigured, schema } from "@/core/db";
+import { displayName, type Friend, type FriendGraph, type FriendProfile, type PendingRequest } from "./types";
 
-export interface FriendProfile {
-  profileId: string;
-  handle: string;
-  fullName: string | null;
-  avatarUrl: string | null;
-  /**
-   * The WHOOP account this person has linked, if any. Null means they have
-   * signed in but never connected a strap — a real state, not an error.
-   */
-  whoopUserId: number | null;
-}
-
-export interface PendingRequest {
-  id: string;
-  profile: FriendProfile;
-  createdAt: Date;
-}
-
-/** An accepted friend, carrying the row id so the card can offer to end it. */
-export interface Friend extends FriendProfile {
-  friendshipId: string;
-}
-
-export interface FriendGraph {
-  friends: Friend[];
-  /** Requests waiting on *you*. These are the ones with a decision to make. */
-  incoming: PendingRequest[];
-  /** Requests you sent that have not been answered. */
-  outgoing: PendingRequest[];
-}
+export type { Friend, FriendGraph, FriendProfile, PendingRequest } from "./types";
+export { displayName } from "./types";
 
 interface ProfileRow {
   profileId: string;
@@ -50,10 +23,6 @@ function toProfile(row: ProfileRow): FriendProfile {
     avatarUrl: row.avatarUrl,
     whoopUserId: row.whoopUserId,
   };
-}
-
-export function displayName(profile: FriendProfile): string {
-  return profile.fullName?.trim() || `@${profile.handle}`;
 }
 
 /**

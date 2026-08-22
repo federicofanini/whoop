@@ -227,6 +227,7 @@ export const it: Dictionary = {
       sub: "Un'app WHOOP in sviluppo può avere {limit} utenti. È un limite della piattaforma, quindi questa app condivide i suoi posti — e chi arriva dopo usa la propria app.",
       slots: "Posti condivisi liberi",
       slotsFree: "Ne restano {remaining}. Collegandoti ora ne occupi uno; puoi passare alla tua app più avanti e restituirlo.",
+      slotsHeld: "Ne stai usando uno. Altri {remaining} sono liberi — passando alla tua app qui sotto restituisci il tuo.",
       slotsGone: "Tutti i posti sono occupati. Per collegare WHOOP ti serve la tua app sviluppatore — si crea in un paio di minuti.",
       usingOwn: "Stai usando la tua app, quindi non occupi un posto condiviso.",
       stored: "Client ID salvato",

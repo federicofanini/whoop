@@ -128,8 +128,9 @@ export default async function SettingsPage({
         <WhoopKeys
           hasOwnKeys={Boolean(ownKeys?.clientId)}
           maskedClientId={ownKeys?.clientId ?? null}
-          remaining={slots.held ? slots.remaining + 1 : slots.remaining}
+          remaining={slots.remaining}
           limit={slots.limit}
+          held={slots.held}
           locked={!slots.held && slots.remaining === 0 && !ownKeys?.clientId}
         />
       ) : null}

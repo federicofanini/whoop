@@ -215,6 +215,7 @@ export const en = {
       sub: "A WHOOP app in development can have {limit} users. That is a platform limit, so this app shares its slots — and anyone past them brings their own app.",
       slots: "Shared slots left",
       slotsFree: "{remaining} still free. Connecting now takes one; you can switch to your own app later and give it back.",
+      slotsHeld: "You are using one. {remaining} of the rest are free — switching to your own app below gives yours back.",
       slotsGone: "All slots are taken. To connect WHOOP you need your own developer app — it takes about two minutes to create.",
       usingOwn: "You are on your own app, so you are not using a shared slot.",
       stored: "Client ID on file",

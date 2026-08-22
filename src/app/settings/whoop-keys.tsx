@@ -18,12 +18,16 @@ export function WhoopKeys({
   maskedClientId,
   remaining,
   limit,
+  held,
   locked,
 }: {
   hasOwnKeys: boolean;
   maskedClientId: string | null;
+  /** Genuinely free slots. A slot this member holds is used, not free. */
   remaining: number;
   limit: number;
+  /** Whether this member is occupying one of them. */
+  held: boolean;
   /** True when the shared slots are gone and this member holds none. */
   locked: boolean;
 }) {
@@ -51,7 +55,9 @@ export function WhoopKeys({
             ? t("settings.keys.slotsGone")
             : hasOwnKeys
               ? t("settings.keys.usingOwn")
-              : t("settings.keys.slotsFree", { remaining })}
+              : held
+                ? t("settings.keys.slotsHeld", { remaining })
+                : t("settings.keys.slotsFree", { remaining })}
         </p>
       </div>
 

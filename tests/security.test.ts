@@ -173,3 +173,21 @@ describe("shared slot limit", () => {
     expect(sharedSlotLimit()).toBe(DEFAULT_SHARED_SLOTS);
   });
 });
+
+describe("dev viewer bypass", () => {
+  it("is compiled out of production by an environment check, not by convention", async () => {
+    // The guard is the whole safety argument for shipping an auth bypass at all,
+    // so it is asserted rather than trusted: reading the source is the only way
+    // to prove the check precedes the lookup.
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync("src/server/auth.ts", "utf8");
+
+    const fn = source.slice(source.indexOf("async function devViewer"));
+    const guard = fn.indexOf('process.env.NODE_ENV === "production"');
+    const read = fn.indexOf("DEV_VIEWER_PROFILE_ID");
+
+    expect(guard).toBeGreaterThan(-1);
+    expect(read).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(read);
+  });
+});
