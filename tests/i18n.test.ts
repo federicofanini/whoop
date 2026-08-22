@@ -97,6 +97,8 @@ describe("dictionary completeness", () => {
       "overview.recovery", "overview.hrv", "chart.recovery", "chart.strain",
       "sleepPage.rem", "live.sdnn", "settings.keys.clientId", "settings.keys.clientSecret",
       "settings.webhooks", "recoveryPage.outOf30",
+      // Panel headings that are just the provider's name.
+      "signIn.telegram.title", "signIn.google.title",
     ]);
 
     const identical = paths(en).filter((path) => {

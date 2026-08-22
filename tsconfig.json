@@ -19,5 +19,9 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  // auth_telegram_example is pasted-in reference code from another project. It
+  // imports modules that do not exist here, so it can never compile — it has
+  // been read and reimplemented in src/core/auth and src/core/telegram, and is
+  // kept only until someone is satisfied with the port. See docs/auth.
+  "exclude": ["node_modules", "auth_telegram_example"]
 }

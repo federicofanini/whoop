@@ -52,9 +52,39 @@ export const it: Dictionary = {
 
   signIn: {
     title: "Accedi",
-    lead: "Strap usa il tuo account Google per sapere chi sei e il tuo account WHOOP per sapere come hai dormito. Sono separati di proposito: puoi accedere e ricevere inviti dalla famiglia anche prima di collegare una fascia.",
-    google: "Continua con Google",
+    lead: "Strap tiene separato chi sei da come hai dormito: accedendo ottieni un profilo e un handle, collegando WHOOP ottieni i dati. Puoi ricevere inviti dalla famiglia anche prima di indossare una fascia.",
     error: "Accesso non riuscito: {message}",
+    telegram: {
+      title: "Telegram",
+      sub: "Strap Bot ti manda un codice di sei cifre. Nessuna password da dimenticare, e la stessa chat servirà poi per tutto ciò che vale la pena farti sapere.",
+      username: "Il tuo username Telegram",
+      code: "Codice ricevuto da Strap Bot",
+      send: "Mandami un codice",
+      verify: "Accedi",
+      resend: "Ricomincia",
+      working: "Un attimo…",
+      sent: "Se quell'username è registrato, il codice sta arrivando. Scade fra cinque minuti.",
+      badUsername: "Non è un username Telegram: da 5 a 32 fra lettere, numeri e trattini bassi, e deve iniziare con una lettera.",
+      badCode: "Il codice è di sei cifre.",
+      wrongCode: "Codice sbagliato o scaduto. Ricomincia per averne uno nuovo.",
+      tooMany: "Troppi codici sbagliati. Richiedine uno nuovo.",
+      rateLimited: "Troppi tentativi di accesso da qui. Riprova fra un'ora.",
+      otherProfile:
+        "Quell'account Telegram appartiene già a un altro profilo Strap. Esci prima, oppure chiedi di unire i due profili.",
+      unconfigured:
+        "L'accesso con Telegram non è configurato su questo deployment. Imposta TELEGRAM_BOT_TOKEN, SESSION_SECRET e DATABASE_URL, poi riavvia.",
+      step: {
+        one: "Apri il bot e premi Avvia:",
+        two: "Torna qui e scrivi l'username che usi su Telegram.",
+        three: "Inserisci il codice che ti arriva. Tutto qui.",
+      },
+    },
+    google: {
+      title: "Google",
+      sub: "Un indirizzo email verificato, e un account che nessun altro può aprire.",
+      button: "Continua con Google",
+      soon: "Non è ancora attivo. Arriverà, e starà accanto a Telegram invece di sostituirlo: uno certifica un indirizzo, l'altro una persona raggiungibile.",
+    },
     unconfigured:
       "Supabase non è configurato. Imposta NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY, poi abilita il provider Google nel progetto Supabase.",
   },
@@ -184,7 +214,15 @@ export const it: Dictionary = {
     lead: "Tre pezzi indipendenti: Google dice chi sei, l'API WHOOP fornisce tutto lo storico e un broadcast Bluetooth porta la frequenza cardiaca in tempo reale. Ognuno funziona senza gli altri.",
     identity: "La tua identità qui",
     identitySub:
-      "Google ti fa accedere; WHOOP fornisce i dati. Scollegare l'uno non tocca l'altro.",
+      "L'accesso dice chi sei; WHOOP fornisce i dati. Scollegare l'uno non tocca l'altro.",
+    methodTelegram: "Telegram collegato",
+    methodTelegramOn: "L'accesso e gli avvisi futuri passano da @{username}.",
+    methodTelegramOff: "Non collegato. Senza, non c'è un canale per raggiungerti.",
+    methodGoogle: "Google collegato",
+    methodGoogleOn: "Su questo profilo risulta un indirizzo email verificato.",
+    methodGoogleOff: "Non ancora collegato: l'accesso con Google è ancora chiuso.",
+    methodBoth:
+      "L'obiettivo sono entrambi: un indirizzo verificato e una persona raggiungibile. Per ora ne basta uno per entrare.",
     signedInAs: "Hai effettuato l'accesso come {email}",
     handOut: "Dai questo handle alla famiglia per farti mandare una richiesta.",
     manageSharing: "Gestisci le condivisioni",

@@ -49,9 +49,39 @@ export const en = {
 
   signIn: {
     title: "Sign in",
-    lead: "Strap uses your Google account to know who you are, and your WHOOP account to know how you slept. They are separate on purpose — you can sign in and be invited by family before ever linking a strap.",
-    google: "Continue with Google",
+    lead: "Strap keeps who you are separate from how you slept: signing in gets you a profile and a handle, linking WHOOP gets you data. You can be invited by family before ever putting on a strap.",
     error: "Sign-in failed: {message}",
+    telegram: {
+      title: "Telegram",
+      sub: "Strap Bot sends you a six-digit code. No password to forget, and the same chat later carries anything worth telling you about.",
+      username: "Your Telegram username",
+      code: "Code from Strap Bot",
+      send: "Send me a code",
+      verify: "Sign in",
+      resend: "Start over",
+      working: "One moment…",
+      sent: "If that username is registered, a code is on its way. It expires in five minutes.",
+      badUsername: "That is not a Telegram username — 5 to 32 letters, digits or underscores, starting with a letter.",
+      badCode: "The code is six digits.",
+      wrongCode: "That code is wrong or has expired. Start over to get a fresh one.",
+      tooMany: "Too many wrong codes. Ask for a new one.",
+      rateLimited: "Too many sign-in attempts from here. Try again in an hour.",
+      otherProfile:
+        "That Telegram account already belongs to a different Strap profile. Sign out first, or ask for the two to be merged.",
+      unconfigured:
+        "Telegram sign-in is not set up on this deployment. Set TELEGRAM_BOT_TOKEN, SESSION_SECRET and DATABASE_URL, then restart.",
+      step: {
+        one: "Open the bot and press Start:",
+        two: "Come back here and type the username you use on Telegram.",
+        three: "Enter the code it sends you. That is the whole thing.",
+      },
+    },
+    google: {
+      title: "Google",
+      sub: "A verified email address, and an account nobody else can open.",
+      button: "Continue with Google",
+      soon: "Not open yet. It is coming, and it is meant to sit alongside Telegram rather than replace it — one proves an address, the other proves someone we can reach.",
+    },
     unconfigured:
       "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then enable the Google provider in your Supabase project.",
   },
@@ -176,7 +206,15 @@ export const en = {
     title: "Connections",
     lead: "Three independent pieces: Google says who you are, the WHOOP API supplies everything historical, and a Bluetooth broadcast carries live heart rate. Each works without the others.",
     identity: "Your identity here",
-    identitySub: "Google signs you in; WHOOP supplies the data. Unlinking one leaves the other.",
+    identitySub: "Sign-in says who you are; WHOOP supplies the data. Unlinking one leaves the other.",
+    methodTelegram: "Telegram linked",
+    methodTelegramOn: "Signing in and any future alerts go through @{username}.",
+    methodTelegramOff: "Not linked. Without it there is no channel to reach you on.",
+    methodGoogle: "Google linked",
+    methodGoogleOn: "A verified email address is on file for this profile.",
+    methodGoogleOff: "Not linked yet — Google sign-in is still closed.",
+    methodBoth:
+      "The plan is both: an address that is verified and a person who can be reached. Either one alone gets you in today.",
     signedInAs: "Signed in as {email}",
     handOut: "Give this handle to family so they can send you a request.",
     manageSharing: "Manage sharing",

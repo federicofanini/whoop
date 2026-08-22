@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   doublePrecision,
   index,
@@ -21,7 +22,13 @@ import {
  * not delete who you are.
  */
 export const profiles = pgTable("profiles", {
-  /** Mirrors `auth.users.id` from Supabase. */
+  /**
+   * Mirrors `auth.users.id` when the profile came from Google.
+   *
+   * A profile created by Telegram sign-in has no Supabase user behind it, so
+   * this is a locally generated UUID instead. Nothing outside `server/auth`
+   * cares which — the rest of the app only needs a stable id per person.
+   */
   id: uuid("id").primaryKey(),
   /**
    * The name friends search for. WHOOP has no public user directory and no
@@ -34,6 +41,27 @@ export const profiles = pgTable("profiles", {
   avatarUrl: text("avatar_url"),
   /** "en" | "it" — remembered so the choice survives a new device. */
   locale: text("locale").$type<Locale>().notNull().default("en"),
+
+  /*
+   * Proof of identity, one column per method.
+   *
+   * Both are nullable and neither is the primary key, because the long-term
+   * goal is a profile that has proved *both*: a Google account nobody else can
+   * open, and a Telegram account that can be messaged. Recording when each was
+   * linked — rather than a pair of booleans — makes "verified since" answerable
+   * and lets a future re-verification policy have something to compare against.
+   */
+
+  /** When Google last proved this profile. Null on a Telegram-only member. */
+  googleLinkedAt: timestamp("google_linked_at", { withTimezone: true }),
+  /**
+   * The numeric Telegram user id, which never changes. The username can be
+   * given up and claimed by someone else, so it is the id that owns the link.
+   */
+  telegramUserId: bigint("telegram_user_id", { mode: "number" }).unique(),
+  /** Lowercased, without the leading @. A cached copy of what the bot last saw. */
+  telegramUsername: text("telegram_username"),
+  telegramLinkedAt: timestamp("telegram_linked_at", { withTimezone: true }),
 
   /*
    * WHOOP credentials.
@@ -62,6 +90,80 @@ export const profiles = pgTable("profiles", {
 });
 
 export type Locale = "en" | "it";
+
+/**
+ * Everyone who has pressed Start on the bot.
+ *
+ * A bot cannot open a conversation: Telegram only lets it reply inside a chat
+ * the person started. So there is no way to send a login code to a username the
+ * bot has never met, and this table is the record of who it has — the reason
+ * the sign-in flow begins in Telegram rather than in the browser.
+ *
+ * Separate from `profiles` on purpose. Pressing Start is not signing up; it
+ * only makes someone reachable. A row here becomes a profile the first time a
+ * code minted against it is actually verified.
+ */
+export const telegramChats = pgTable(
+  "telegram_chats",
+  {
+    /** The person. Stable for the life of the Telegram account. */
+    telegramUserId: bigint("telegram_user_id", { mode: "number" }).primaryKey(),
+    /**
+     * Where to deliver a message. Identical to the user id for a private chat,
+     * kept separate because it is the field the Bot API actually takes.
+     */
+    chatId: bigint("chat_id", { mode: "number" }).notNull(),
+    /**
+     * Lowercased, without the @, and null for the accounts that have none.
+     *
+     * Unique, because sign-in resolves a username to exactly one person — but
+     * *not* the key: Telegram releases abandoned usernames for anyone to claim,
+     * so the registry clears the old holder before recording a new one.
+     */
+    username: text("username"),
+    firstName: text("first_name"),
+    lastName: text("last_name"),
+    /** Their Telegram interface language, used to pick the bot's replies. */
+    languageCode: text("language_code"),
+    /** Set when someone sends /stop; they stay in the table but cannot sign in. */
+    blockedAt: timestamp("blocked_at", { withTimezone: true }),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("telegram_chats_username_idx").on(t.username)],
+);
+
+/**
+ * One-time codes, in flight.
+ *
+ * Only the SHA-256 of the code is stored. A code sits in this table for five
+ * minutes, and for those five minutes the table is a list of valid credentials
+ * — so a leaked backup or a careless log of a row must not be enough to sign in
+ * as anybody.
+ *
+ * Rows are kept after use rather than deleted: `consumedAt` is what makes a
+ * correct code work exactly once, and the trail of recent rows per IP is what
+ * the request rate limit counts.
+ */
+export const loginCodes = pgTable(
+  "login_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    telegramUserId: bigint("telegram_user_id", { mode: "number" }).notNull(),
+    codeHash: text("code_hash").notNull(),
+    /** Incremented before each comparison, so an abandoned guess still costs one. */
+    attempts: integer("attempts").notNull().default(0),
+    /** Only ever compared and counted; never shown. */
+    requestIp: text("request_ip"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("login_codes_user_idx").on(t.telegramUserId, t.createdAt),
+    index("login_codes_ip_idx").on(t.requestIp, t.createdAt),
+  ],
+);
 
 /**
  * One row per linked WHOOP account, keyed by the WHOOP user id — which is also
@@ -277,3 +379,5 @@ export type Account = typeof accounts.$inferSelect;
 export type HrSample = typeof hrSamples.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
+export type TelegramChat = typeof telegramChats.$inferSelect;
+export type LoginCode = typeof loginCodes.$inferSelect;

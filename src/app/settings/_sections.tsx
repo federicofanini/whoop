@@ -88,6 +88,13 @@ async function ConnectButton() {
   );
 }
 
+/**
+ * Who you are here, and by which proofs.
+ *
+ * The two methods are listed whether or not they are held, because the target
+ * state is both — so a member with one needs to see the gap, not a panel that
+ * quietly omits what is missing.
+ */
 export async function IdentityPanel() {
   const [t, viewer] = await Promise.all([getTranslator(), getViewer()]);
 
@@ -95,27 +102,43 @@ export async function IdentityPanel() {
     <Panel>
       <PanelHeader title={t("settings.identity")} subtitle={t("settings.identitySub")} />
       {viewer ? (
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-[15px] font-semibold text-ink">@{viewer.handle}</p>
-            <p className="mt-1 text-[13px] text-muted">
-              {viewer.email ? `${t("settings.signedInAs", { email: viewer.email })} · ` : ""}
-              {t("settings.handOut")}{" "}
-              <Link href="/friends" className="text-ink-2 underline underline-offset-4">
-                {t("settings.manageSharing")}
-              </Link>
-            </p>
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-[15px] font-semibold text-ink">@{viewer.handle}</p>
+              <p className="mt-1 text-[13px] text-muted">
+                {viewer.email ? `${t("settings.signedInAs", { email: viewer.email })} · ` : ""}
+                {t("settings.handOut")}{" "}
+                <Link href="/friends" className="text-ink-2 underline underline-offset-4">
+                  {t("settings.manageSharing")}
+                </Link>
+              </p>
+            </div>
+            {/* A POST, so a prefetch or a crawler can never sign you out. */}
+            <form action="/auth/sign-out" method="post">
+              <button
+                type="submit"
+                className="border border-hairline px-4 py-2.5 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
+              >
+                {t("nav.signOut")}
+              </button>
+            </form>
           </div>
-          {/* A POST, so a prefetch or a crawler can never sign you out. */}
-          <form action="/auth/sign-out" method="post">
-            <button
-              type="submit"
-              className="border border-hairline px-4 py-2.5 text-[13px] font-medium text-muted transition-colors hover:text-ink-2"
-            >
-              {t("nav.signOut")}
-            </button>
-          </form>
-        </div>
+
+          <div className="mt-5 space-y-3 border-t border-hairline pt-4">
+            <Requirement met={viewer.identity.telegram} label={t("settings.methodTelegram")}>
+              {viewer.identity.telegram
+                ? t("settings.methodTelegramOn", { username: viewer.telegramUsername ?? "—" })
+                : t("settings.methodTelegramOff")}
+            </Requirement>
+            <Requirement met={viewer.identity.google} label={t("settings.methodGoogle")}>
+              {viewer.identity.google
+                ? t("settings.methodGoogleOn")
+                : t("settings.methodGoogleOff")}
+            </Requirement>
+            <p className="text-[12px] leading-relaxed text-muted">{t("settings.methodBoth")}</p>
+          </div>
+        </>
       ) : (
         <p className="text-[13px] leading-relaxed text-ink-2">
           {t("settings.notSignedIn")}{" "}

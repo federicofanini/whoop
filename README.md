@@ -328,8 +328,8 @@ hand it out.
 | `WHOOP_REDIRECT_URI` | Must match the app registration exactly |
 | `WHOOP_WEBHOOK_SECRET` | Signing key for webhook deliveries (defaults to the client secret) |
 | `DATABASE_URL` | Postgres connection string. Required for friends |
-
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Google sign-in and the live HR transport |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_WEBHOOK_SECRET` / `SESSION_SECRET` | Sign-in, via Strap Bot — see [docs/auth](docs/auth/README.md) |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The live HR transport, and Google sign-in once it opens |
 | `CRON_SECRET` | Bearer token protecting the nightly reconcile job |
 
 Everything is optional. Without `DATABASE_URL` the dashboard runs on demo data

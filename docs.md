@@ -38,8 +38,11 @@ into *your* data:
 | You want | You need |
 | --- | --- |
 | Your own WHOOP history | `DATABASE_URL` + WHOOP OAuth |
-| Sign-in and friends | the above + Supabase Auth |
+| Sign-in and friends | the above + Strap Bot on Telegram |
 | Live heart rate across devices | the above + Supabase Realtime |
+
+Sign-in is Telegram one-time codes; Google is built but closed. The whole of it
+is documented in [docs/auth](./docs/auth/README.md).
 
 ---
 
@@ -68,12 +71,23 @@ origin in production. WHOOP allows several, so register both.
 | --- | --- | --- |
 | `DATABASE_URL` | Everything except demo mode | Any Postgres. Use Supabase's **transaction pooler** string (port 6543), not the direct one |
 
+### Telegram
+
+The way members sign in. Full setup in [docs/auth/strap-bot.md](./docs/auth/strap-bot.md).
+
+| Variable | Required for | Notes |
+| --- | --- | --- |
+| `TELEGRAM_BOT_TOKEN` | Sending sign-in codes | From [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_WEBHOOK_SECRET` | Receiving bot updates | `openssl rand -hex 32`. Unset means the webhook rejects everything |
+| `SESSION_SECRET` | Holding a session | `openssl rand -hex 32`. Changing it signs everyone out |
+| `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | The "open the bot" link | The bot's @name, without the @ |
+
 ### Supabase
 
 | Variable | Required for | Notes |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Sign-in, friends, live | Project settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sign-in, friends, live | Public by design — it is protected by row-level security and is the key the browser is meant to hold |
+| `NEXT_PUBLIC_SUPABASE_URL` | Live heart rate, and Google sign-in once opened | Project settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same | Public by design — it is protected by row-level security and is the key the browser is meant to hold |
 
 ### Application
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 
 /**
  * Starts the Google handshake from the browser.
@@ -10,12 +9,30 @@ import { createBrowserClient } from "@supabase/ssr";
  * browser a redirect it controls, including the PKCE verifier it stores locally.
  * The code that comes back is exchanged server-side in /auth/callback, which is
  * where the session cookie is actually set.
+ *
+ * `comingSoon` renders the same button, inert. Showing it greyed rather than
+ * hiding it keeps the promise visible — this method is arriving, not missing —
+ * and means opening it later is a flag, not a layout change.
  */
-export function GoogleButton({ label, next }: { label: string; next: string }) {
+export function GoogleButton({
+  label,
+  next,
+  comingSoon = false,
+}: {
+  label: string;
+  next: string;
+  comingSoon?: boolean;
+}) {
   const [pending, setPending] = useState(false);
 
   async function signIn() {
     setPending(true);
+
+    // Imported on click rather than at the top of the module. The Supabase
+    // browser client is most of this page's JavaScript, and while Google is
+    // closed nobody can even reach the code that needs it — a statically
+    // imported one would be ~80 kB shipped to every visitor for an inert button.
+    const { createBrowserClient } = await import("@supabase/ssr");
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -37,8 +54,9 @@ export function GoogleButton({ label, next }: { label: string; next: string }) {
     <button
       type="button"
       onClick={signIn}
-      disabled={pending}
-      className="flex w-full items-center justify-center gap-3  border border-hairline bg-surface-2 px-4 py-3 text-[14px] font-semibold text-ink transition-colors hover:bg-hairline disabled:opacity-60"
+      disabled={pending || comingSoon}
+      aria-disabled={comingSoon}
+      className="flex w-full items-center justify-center gap-3  border border-hairline bg-surface-2 px-4 py-3 text-[14px] font-semibold text-ink transition-colors hover:bg-hairline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-surface-2"
     >
       <GoogleMark />
       {label}
