@@ -7,7 +7,7 @@ import { CODE_LENGTH, issueLoginCode, normalizeCode, verifyLoginCode, withinRequ
 import { isSessionSecretConfigured } from "@/core/auth/token";
 import { isBotConfigured } from "@/core/telegram/bot";
 import { reachableChatFor } from "@/core/telegram/registry";
-import { validateTelegramUsername } from "@/core/telegram/username";
+import { normalizeTelegramUsername, validateTelegramUsername } from "@/core/telegram/username";
 import { getViewer, linkTelegramIdentity } from "@/server/auth";
 import { syncLocaleCookie } from "@/server/locale";
 import { startTelegramSession } from "@/server/session";
@@ -40,21 +40,45 @@ async function requestStep(formData: FormData): Promise<LoginState> {
   const raw = String(formData.get("username") ?? "");
   const parsed = validateTelegramUsername(raw);
 
+  // Every path out of this step starts the attempt count over: a new code
+  // means the guesses spent on the last one are no longer being counted.
   if (!parsed.ok) {
-    return { step: "request", username: raw.trim(), errorKey: parsed.errorKey };
+    // Normalised even when invalid: the field renders behind a fixed "@", so
+    // echoing back what was typed verbatim would show it twice.
+    return {
+      step: "request",
+      username: normalizeTelegramUsername(raw),
+      errorKey: parsed.errorKey,
+      attempt: 0,
+    };
   }
   if (!configured()) {
-    return { step: "request", username: parsed.username, errorKey: "signIn.telegram.unconfigured" };
+    return {
+      step: "request",
+      username: parsed.username,
+      errorKey: "signIn.telegram.unconfigured",
+      attempt: 0,
+    };
   }
 
   if (!(await withinRequestLimit(await clientIp()))) {
-    return { step: "request", username: parsed.username, errorKey: "signIn.telegram.rateLimited" };
+    return {
+      step: "request",
+      username: parsed.username,
+      errorKey: "signIn.telegram.rateLimited",
+      attempt: 0,
+    };
   }
 
   const chat = await reachableChatFor(parsed.username);
   if (chat) await issueLoginCode(chat.telegramUserId, chat.chatId, await clientIp());
 
-  return { step: "verify", username: parsed.username, noticeKey: "signIn.telegram.sent" };
+  return {
+    step: "verify",
+    username: parsed.username,
+    noticeKey: "signIn.telegram.sent",
+    attempt: 0,
+  };
 }
 
 /**
@@ -65,28 +89,33 @@ async function requestStep(formData: FormData): Promise<LoginState> {
  * with accounts nobody asked for.
  */
 async function verifyStep(previous: LoginState, formData: FormData): Promise<LoginState> {
+  /** Same step, empty boxes, caret back in the first one. */
+  const retry = (errorKey: string): LoginState => ({
+    ...previous,
+    noticeKey: undefined,
+    errorKey,
+    attempt: previous.attempt + 1,
+  });
+
   const code = normalizeCode(String(formData.get("code") ?? ""));
-  if (code.length !== CODE_LENGTH) {
-    return { ...previous, noticeKey: undefined, errorKey: "signIn.telegram.badCode" };
-  }
-  if (!configured()) {
-    return { ...previous, noticeKey: undefined, errorKey: "signIn.telegram.unconfigured" };
-  }
+  if (code.length !== CODE_LENGTH) return retry("signIn.telegram.badCode");
+  if (!configured()) return retry("signIn.telegram.unconfigured");
 
   const chat = await reachableChatFor(previous.username);
-  if (!chat) {
-    // No chat means no code was ever issued. Same message as a wrong code, for
-    // the same reason step one gives the same message to everyone.
-    return { ...previous, noticeKey: undefined, errorKey: "signIn.telegram.wrongCode" };
-  }
+  // No chat means no code was ever issued. Same message as a wrong code, for
+  // the same reason step one gives the same message to everyone.
+  if (!chat) return retry("signIn.telegram.wrongCode");
 
   const result = await verifyLoginCode(chat.telegramUserId, code);
   if (result === "too-many-attempts") {
-    return { step: "request", username: previous.username, errorKey: "signIn.telegram.tooMany" };
+    return {
+      step: "request",
+      username: previous.username,
+      errorKey: "signIn.telegram.tooMany",
+      attempt: 0,
+    };
   }
-  if (result === "invalid") {
-    return { ...previous, noticeKey: undefined, errorKey: "signIn.telegram.wrongCode" };
-  }
+  if (result === "invalid") return retry("signIn.telegram.wrongCode");
 
   // Signed in already? Then this is somebody adding their second method, and
   // the Telegram account joins the profile they are already using rather than
@@ -104,7 +133,12 @@ async function verifyStep(previous: LoginState, formData: FormData): Promise<Log
   );
 
   if (!linked.ok) {
-    return { step: "request", username: previous.username, errorKey: linked.errorKey };
+    return {
+      step: "request",
+      username: previous.username,
+      errorKey: linked.errorKey,
+      attempt: 0,
+    };
   }
 
   await startTelegramSession({

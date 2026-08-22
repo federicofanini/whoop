@@ -56,7 +56,7 @@ export const it: Dictionary = {
     error: "Accesso non riuscito: {message}",
     telegram: {
       title: "Telegram",
-      sub: "Strap Bot ti manda un codice di sei cifre. Nessuna password da dimenticare, e la stessa chat servirà poi per tutto ciò che vale la pena farti sapere.",
+      sub: "",
       username: "Il tuo username Telegram",
       code: "Codice ricevuto da Strap Bot",
       send: "Mandami un codice",
@@ -64,7 +64,8 @@ export const it: Dictionary = {
       resend: "Ricomincia",
       working: "Un attimo…",
       sent: "Se quell'username è registrato, il codice sta arrivando. Scade fra cinque minuti.",
-      badUsername: "Non è un username Telegram: da 5 a 32 fra lettere, numeri e trattini bassi, e deve iniziare con una lettera.",
+      badUsername:
+        "Non è un username Telegram: da 5 a 32 fra lettere, numeri e trattini bassi, e deve iniziare con una lettera.",
       badCode: "Il codice è di sei cifre.",
       wrongCode: "Codice sbagliato o scaduto. Ricomincia per averne uno nuovo.",
       tooMany: "Troppi codici sbagliati. Richiedine uno nuovo.",
@@ -81,9 +82,9 @@ export const it: Dictionary = {
     },
     google: {
       title: "Google",
-      sub: "Un indirizzo email verificato, e un account che nessun altro può aprire.",
+      sub: "",
       button: "Continua con Google",
-      soon: "Non è ancora attivo. Arriverà, e starà accanto a Telegram invece di sostituirlo: uno certifica un indirizzo, l'altro una persona raggiungibile.",
+      soon: "Presto disponibile.",
     },
     unconfigured:
       "Supabase non è configurato. Imposta NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY, poi abilita il provider Google nel progetto Supabase.",
@@ -109,9 +110,11 @@ export const it: Dictionary = {
     ofNeed: "{percent}% di quanto ti serviva",
     debtCaption: "Deficit accumulato in 7 notti",
     recovery30: "Recovery, ultimi 30 giorni",
-    recovery30Sub: "Le barre sono colorate per fascia; il punteggio è sempre nel tooltip.",
+    recovery30Sub:
+      "Le barre sono colorate per fascia; il punteggio è sempre nel tooltip.",
     strain30: "Strain, ultimi 30 giorni",
-    strain30Sub: "{over} degli ultimi {total} giorni sono andati oltre la recovery.",
+    strain30Sub:
+      "{over} degli ultimi {total} giorni sono andati oltre la recovery.",
     last14: "Ultimi 14 giorni",
     hrv: "HRV",
     restingHr: "FC a riposo",
@@ -175,7 +178,8 @@ export const it: Dictionary = {
     noHistory:
       "{name} ha accettato la condivisione ma non ha ancora uno storico sincronizzato. I dati compariranno qui dopo il primo backfill.",
     sideBySide: "Questa settimana, a confronto",
-    sideBySideSub: "Medie su sette giorni. Ogni colonna è lo storico recente di quella persona.",
+    sideBySideSub:
+      "Medie su sette giorni. Ogni colonna è lo storico recente di quella persona.",
     sideBySideDemo:
       "Medie su sette giorni. La tua colonna mostra dati demo finché non colleghi WHOOP.",
     metric: "Metrica",
@@ -195,10 +199,12 @@ export const it: Dictionary = {
     openSettings: "Apri le impostazioni",
     sent: "Richiesta inviata a @{handle}.",
     renamed: "Ora sei @{handle}.",
-    reverseAccepted: "@{handle} ti aveva già invitato — ora state condividendo.",
+    reverseAccepted:
+      "@{handle} ti aveva già invitato — ora state condividendo.",
     error: {
       tooShort: "Gli handle sono di almeno 3 caratteri.",
-      charset: "Gli handle iniziano con una lettera e usano lettere, numeri, . o _",
+      charset:
+        "Gli handle iniziano con una lettera e usano lettere, numeri, . o _",
       self: "Questo è il tuo handle.",
       already: "Tu e @{handle} state già condividendo.",
       pending: "Stai già aspettando che @{handle} accetti.",
@@ -217,10 +223,12 @@ export const it: Dictionary = {
       "L'accesso dice chi sei; WHOOP fornisce i dati. Scollegare l'uno non tocca l'altro.",
     methodTelegram: "Telegram collegato",
     methodTelegramOn: "L'accesso e gli avvisi futuri passano da @{username}.",
-    methodTelegramOff: "Non collegato. Senza, non c'è un canale per raggiungerti.",
+    methodTelegramOff:
+      "Non collegato. Senza, non c'è un canale per raggiungerti.",
     methodGoogle: "Google collegato",
     methodGoogleOn: "Su questo profilo risulta un indirizzo email verificato.",
-    methodGoogleOff: "Non ancora collegato: l'accesso con Google è ancora chiuso.",
+    methodGoogleOff:
+      "Non ancora collegato: l'accesso con Google è ancora chiuso.",
     methodBoth:
       "L'obiettivo sono entrambi: un indirizzo verificato e una persona raggiungibile. Per ora ne basta uno per entrare.",
     signedInAs: "Hai effettuato l'accesso come {email}",
@@ -264,8 +272,10 @@ export const it: Dictionary = {
       title: "La tua app sviluppatore WHOOP",
       sub: "Un'app WHOOP in sviluppo può avere {limit} utenti. È un limite della piattaforma, quindi questa app condivide i suoi posti — e chi arriva dopo usa la propria app.",
       slots: "Posti condivisi liberi",
-      slotsFree: "Ne restano {remaining}. Collegandoti ora ne occupi uno; puoi passare alla tua app più avanti e restituirlo.",
-      slotsGone: "Tutti i posti sono occupati. Per collegare WHOOP ti serve la tua app sviluppatore — si crea in un paio di minuti.",
+      slotsFree:
+        "Ne restano {remaining}. Collegandoti ora ne occupi uno; puoi passare alla tua app più avanti e restituirlo.",
+      slotsGone:
+        "Tutti i posti sono occupati. Per collegare WHOOP ti serve la tua app sviluppatore — si crea in un paio di minuti.",
       usingOwn: "Stai usando la tua app, quindi non occupi un posto condiviso.",
       stored: "Client ID salvato",
       remove: "Rimuovi le chiavi",
@@ -276,20 +286,27 @@ export const it: Dictionary = {
       saved: "Salvate. Collega WHOOP per completare.",
       missing: "Servono sia il client ID sia il secret.",
       tooShort: "Non sembrano un client ID e un secret WHOOP.",
-      noEncryption: "CREDENTIALS_SECRET non è impostato, quindi i secret non possono essere salvati in sicurezza. Impostalo e riavvia.",
+      noEncryption:
+        "CREDENTIALS_SECRET non è impostato, quindi i secret non possono essere salvati in sicurezza. Impostalo e riavvia.",
       signedOut: "Accedi prima di continuare.",
       step: {
         one: "Crea un'app su developer-dashboard.whoop.com — un nome qualsiasi va bene.",
         two: "Imposta il suo redirect URI esattamente al valore usato da questo deployment, mostrato qui sotto.",
-        three: "Copia qui client ID e secret. Vengono cifrati prima di essere salvati e usati solo per parlare con WHOOP a tuo nome.",
+        three:
+          "Copia qui client ID e secret. Vengono cifrati prima di essere salvati e usati solo per parlare con WHOOP a tuo nome.",
       },
     },
     error: {
-      needs_own_keys: "L'app WHOOP condivisa è piena. Aggiungi qui sotto le tue chiavi sviluppatore per collegarti.",
-      not_configured: "Questo deployment non ha un'app WHOOP condivisa. Aggiungi qui sotto le tue chiavi sviluppatore.",
-      no_encryption_key: "Le tue chiavi sono salvate ma non possono essere decifrate — CREDENTIALS_SECRET manca o è cambiato.",
-      credentials_changed: "Le tue credenziali sono cambiate durante il collegamento. Riprova da capo.",
-      state_mismatch: "Non è stato possibile verificare il tentativo di accesso. Riprova.",
+      needs_own_keys:
+        "L'app WHOOP condivisa è piena. Aggiungi qui sotto le tue chiavi sviluppatore per collegarti.",
+      not_configured:
+        "Questo deployment non ha un'app WHOOP condivisa. Aggiungi qui sotto le tue chiavi sviluppatore.",
+      no_encryption_key:
+        "Le tue chiavi sono salvate ma non possono essere decifrate — CREDENTIALS_SECRET manca o è cambiato.",
+      credentials_changed:
+        "Le tue credenziali sono cambiate durante il collegamento. Riprova da capo.",
+      state_mismatch:
+        "Non è stato possibile verificare il tentativo di accesso. Riprova.",
     },
     cli: "Senza interfaccia",
     cliBody:
@@ -349,9 +366,11 @@ export const it: Dictionary = {
     signals: "Segnali di recovery",
     signalsSub: "Solo ciò che esce dal tuo intervallo abituale.",
     hrvTitle: "Variabilità della frequenza cardiaca",
-    hrvSub: "90 giorni. La banda è ±1 deviazione standard attorno a una media mobile a 30 giorni — dentro è rumore, fuori è segnale.",
+    hrvSub:
+      "90 giorni. La banda è ±1 deviazione standard attorno a una media mobile a 30 giorni — dentro è rumore, fuori è segnale.",
     rhrTitle: "Frequenza cardiaca a riposo",
-    rhrSub: "Una FC a riposo che sale mentre l'HRV scende è il quadro su cui vale la pena intervenire — presi singolarmente sono di solito rumore.",
+    rhrSub:
+      "Una FC a riposo che sale mentre l'HRV scende è il quadro su cui vale la pena intervenire — presi singolarmente sono di solito rumore.",
     dailyTitle: "Punteggio di recovery giornaliero",
     dailySub: "Ultimi 60 giorni.",
   },
@@ -370,14 +389,18 @@ export const it: Dictionary = {
     signals: "Segnali di carico",
     signalsSub: "Dove sta il tuo allenamento rispetto alla tua capacità.",
     scatterTitle: "Strain rispetto alla recovery",
-    scatterSub: "Ogni punto è un giorno. La diagonale ombreggiata è lo strain che ciascun livello di recovery sostiene — i punti sopra sono i giorni in cui hai superato la tua recovery.",
+    scatterSub:
+      "Ogni punto è un giorno. La diagonale ombreggiata è lo strain che ciascun livello di recovery sostiene — i punti sopra sono i giorni in cui hai superato la tua recovery.",
     deviationTitle: "Scostamento giornaliero",
-    deviationSub: "Strain meno quanto la recovery di quel giorno sosteneva. Una sola misura, quindi un solo asse, con uno zero reale.",
+    deviationSub:
+      "Strain meno quanto la recovery di quel giorno sosteneva. Una sola misura, quindi un solo asse, con uno zero reale.",
     loadTitle: "Carico acuto e cronico",
-    loadSub: "Sono entrambi strain pesato esponenzialmente nelle stesse unità, quindi condividono legittimamente un asse. Il loro rapporto è il numero che conta: 0,80–1,30 è la fascia produttiva.",
+    loadSub:
+      "Sono entrambi strain pesato esponenzialmente nelle stesse unità, quindi condividono legittimamente un asse. Il loro rapporto è il numero che conta: 0,80–1,30 è la fascia produttiva.",
     dailyTitle: "Strain giornaliero",
     dailySub: "Ultimi 60 giorni.",
-    zoneProductive: "Stai aggiungendo stimolo a un ritmo che la tua base assorbe",
+    zoneProductive:
+      "Stai aggiungendo stimolo a un ritmo che la tua base assorbe",
     zoneOverreaching: "Il carico acuto è schizzato oltre la tua base",
     zoneDetraining: "Il carico acuto è sceso sotto la tua base",
   },
@@ -389,17 +412,21 @@ export const it: Dictionary = {
     avgAsleep: "Sonno medio",
     againstNeed: "Contro un fabbisogno di {need}",
     restorative: "Quota ristoratrice",
-    restorativeCaption: "REM più profondo, sul totale del sonno. Il valore tipico è 40–50%.",
+    restorativeCaption:
+      "REM più profondo, sul totale del sonno. Il valore tipico è 40–50%.",
     spread: "Variabilità dell'orario",
     spreadCaption: "L'obiettivo è restare sotto i ±30 minuti",
     signals: "Segnali dal sonno",
     signalsSub: "Dove le tue notti ti aiutano o ti costano.",
     architecture: "Architettura del sonno",
-    architectureSub: "Le fasi si impilano dalla più profonda e condividono una sola tinta — la profondità si legge come scurezza. La linea a gradini è quanto WHOOP ha calcolato che ti servisse quella notte.",
+    architectureSub:
+      "Le fasi si impilano dalla più profonda e condividono una sola tinta — la profondità si legge come scurezza. La linea a gradini è quanto WHOOP ha calcolato che ti servisse quella notte.",
     shortfall: "Deficit per notte",
-    shortfallSub: "Di quanto ogni notte è rimasta sotto il proprio fabbisogno. Il debito si accumula — non lo azzera una singola dormita lunga.",
+    shortfallSub:
+      "Di quanto ogni notte è rimasta sotto il proprio fabbisogno. Il debito si accumula — non lo azzera una singola dormita lunga.",
     regularity: "Regolarità degli orari",
-    regularitySub: "La costanza è l'ingrediente più controllabile della qualità del sonno, e di solito rende più del tempo extra a letto.",
+    regularitySub:
+      "La costanza è l'ingrediente più controllabile della qualità del sonno, e di solito rende più del tempo extra a letto.",
     correlation: "Il sonno guida davvero la tua recovery?",
     genuinelyRegular: "Davvero regolare",
     deep: "Profondo",
@@ -411,8 +438,10 @@ export const it: Dictionary = {
     none: "Nessuno",
     needMet: "Fabbisogno coperto · {performance}% di performance",
     time: "Tempo",
-    correlationDetail: "Correlazione di {r} su {nights} notti — il sonno spiega circa il {variance}% della variazione del tuo punteggio di recovery.",
-    correlationThin: "Servono ancora un paio di settimane di notti prima che la relazione significhi qualcosa.",
+    correlationDetail:
+      "Correlazione di {r} su {nights} notti — il sonno spiega circa il {variance}% della variazione del tuo punteggio di recovery.",
+    correlationThin:
+      "Servono ancora un paio di settimane di notti prima che la relazione significhi qualcosa.",
   },
 
   livePage: {
@@ -425,7 +454,8 @@ export const it: Dictionary = {
     onMac: "Sul tuo Mac —",
     onIphone: "Sul tuo iPhone —",
     streamingFrom: "In streaming da {device}",
-    zonesSub: "Le zone sono quote del tuo massimo di {maxHr} bpm. Le zone alte costano strain in modo più che proporzionale.",
+    zonesSub:
+      "Le zone sono quote del tuo massimo di {maxHr} bpm. Le zone alte costano strain in modo più che proporzionale.",
   },
 
   insight: {
@@ -480,12 +510,14 @@ export const it: Dictionary = {
         "Acuto {acute} contro cronico {chronic}. Stai aggiungendo stimolo a un ritmo che la tua base riesce ad assorbire.",
     },
     balanceOver: {
-      title: "Hai superato la tua recovery in {over} degli ultimi {total} giorni",
+      title:
+        "Hai superato la tua recovery in {over} degli ultimi {total} giorni",
       detail:
         "In media {mean} di strain sopra quanto la recovery di ciascun giorno sosteneva. Un eccesso occasionale è il modo in cui avviene l'adattamento; un mese così è il modo in cui ci si appiattisce.",
     },
     balanceUnder: {
-      title: "Hai lasciato capacità inutilizzata in {under} degli ultimi {total} giorni",
+      title:
+        "Hai lasciato capacità inutilizzata in {under} degli ultimi {total} giorni",
       detail:
         "In media {mean} di strain sotto quanto la recovery sosteneva. Il tuo corpo stava offrendo più di quanto gli hai chiesto.",
     },
@@ -508,7 +540,8 @@ export const it: Dictionary = {
     },
     sleepRegular: {
       title: "L'orario in cui vai a letto resta entro ±{minutes} minuti",
-      detail: "È davvero regolare, e sta lavorando in silenzio a favore della tua recovery.",
+      detail:
+        "È davvero regolare, e sta lavorando in silenzio a favore della tua recovery.",
     },
     restorativeLow: {
       title: "Solo il {share}% del tuo sonno è REM o profondo",
@@ -516,7 +549,8 @@ export const it: Dictionary = {
         "Il valore tipico è 40-50%. Qui il limite non è il tempo a letto, è la qualità. Alcol, cene tardi e una stanza calda deprimono esattamente queste due fasi.",
     },
     sleepRecoveryLink: {
-      title: "Il sonno spiega il {variance}% della variabilità della tua recovery",
+      title:
+        "Il sonno spiega il {variance}% della variabilità della tua recovery",
       detail:
         "Correlazione di {r} su {nights} notti. Un legame reale ma parziale: conta il sonno, e conta la gestione del carico.",
       detailStrong:

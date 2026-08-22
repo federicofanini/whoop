@@ -73,8 +73,9 @@ public HTTPS URL, so the webhook needs a tunnel — see
 ## Verifying a deployment
 
 ```bash
-bun run telegram info     # bot identity, webhook URL, pending updates, last error
-bun run db:push           # apply the schema, including drizzle/0002_telegram_auth.sql
+bun run telegram info      # bot identity, webhook URL, pending updates, last error
+bun run db:migrate --dry   # what schema changes are outstanding
+bun run db:migrate         # apply them
 ```
 
 `/settings` shows the same picture from inside the app: which requirements are

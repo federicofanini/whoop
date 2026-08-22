@@ -13,9 +13,18 @@ export interface LoginState {
   username: string;
   noticeKey?: string;
   errorKey?: string;
+  /**
+   * Bumped every time a code is rejected.
+   *
+   * The code field keys off this and remounts, which empties the six boxes and
+   * puts the caret back in the first one. Without it a wrong code stays on
+   * screen, and the field — already full — never fires `onComplete` again, so
+   * the member is left retyping over the top of their own mistake.
+   */
+  attempt: number;
 }
 
-export const initialLoginState: LoginState = { step: "request", username: "" };
+export const initialLoginState: LoginState = { step: "request", username: "", attempt: 0 };
 
 /**
  * Where to land after signing in.

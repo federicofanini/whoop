@@ -214,6 +214,29 @@ h3 {
   outline-offset: 2px;
 }
 
+/*
+ * The blinking caret inside a one-time-code box.
+ *
+ * The boxes are divs, not inputs, so there is no real caret to show — the
+ * component draws its own and this is what makes it look alive. Stepped rather
+ * than eased, because a caret does not fade.
+ */
+@keyframes caret-blink {
+  0%,
+  70%,
+  100% {
+    opacity: 1;
+  }
+  20%,
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-caret-blink {
+  animation: caret-blink 1.25s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

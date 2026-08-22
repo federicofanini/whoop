@@ -1,8 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { CODE_LENGTH } from "@/core/auth/code";
 import { useT } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { loginAction } from "./actions";
 import { initialLoginState, type LoginState } from "./login-state";
 
@@ -19,6 +26,8 @@ export function TelegramForm({ next, botUsername }: { next: string; botUsername:
     loginAction,
     initialLoginState,
   );
+  // Needed so the code field can submit the form itself once it is full.
+  const formRef = useRef<HTMLFormElement>(null);
 
   const verifying = state.step === "verify";
 
@@ -49,28 +58,50 @@ export function TelegramForm({ next, botUsername }: { next: string; botUsername:
         ))}
       </ol>
 
-      <form action={action} className="space-y-3">
+      <form ref={formRef} action={action} className="space-y-3">
         <input type="hidden" name="next" value={next} />
 
         <div>
           <label className="eyebrow mb-1.5 block" htmlFor="username">
             {t("signIn.telegram.username")}
           </label>
-          <input
-            id="username"
-            name="username"
-            required
-            autoComplete="username"
-            spellCheck={false}
-            autoCapitalize="none"
-            defaultValue={state.username}
-            // Locked once a code is out, so the code and the name on screen
-            // cannot drift apart. Read-only rather than disabled: a disabled
-            // field is not submitted, and the action needs it back.
-            readOnly={verifying}
-            placeholder="@your_username"
-            className="w-full border border-hairline bg-surface px-3 py-2 font-mono text-[13px] text-ink placeholder:text-muted read-only:text-muted"
-          />
+          <div className="relative">
+            {/*
+              The @ is chrome, not content: it sits outside the field so it
+              cannot be selected, typed over or deleted, which is the whole
+              point — it says "this is a Telegram username" without the member
+              having to know whether to type it. It is aria-hidden because the
+              label already names the field, and the value never includes it.
+            */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[13px] text-muted"
+            >
+              @
+            </span>
+            <input
+              id="username"
+              name="username"
+              required
+              autoComplete="username"
+              spellCheck={false}
+              autoCapitalize="none"
+              autoCorrect="off"
+              defaultValue={state.username}
+              // Someone pasting "@marco" would otherwise read "@@marco".
+              onInput={(event) => {
+                const field = event.currentTarget;
+                const stripped = field.value.replace(/@/g, "");
+                if (stripped !== field.value) field.value = stripped;
+              }}
+              // Locked once a code is out, so the code and the name on screen
+              // cannot drift apart. Read-only rather than disabled: a disabled
+              // field is not submitted, and the action needs it back.
+              readOnly={verifying}
+              placeholder="your_username"
+              className="w-full border border-hairline bg-surface py-2 pl-6 pr-3 font-mono text-[13px] text-ink placeholder:text-muted read-only:text-muted"
+            />
+          </div>
         </div>
 
         {verifying ? (
@@ -78,19 +109,28 @@ export function TelegramForm({ next, botUsername }: { next: string; botUsername:
             <label className="eyebrow mb-1.5 block" htmlFor="code">
               {t("signIn.telegram.code")}
             </label>
-            <input
+            <InputOTP
+              // Remounts after a rejected code, which is what empties the
+              // boxes and lets onComplete fire again.
+              key={state.attempt}
               id="code"
               name="code"
-              required
-              // Numeric keypad on a phone, without the spinners `type=number`
-              // brings and without rejecting a pasted "123 456".
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={7}
+              maxLength={CODE_LENGTH}
+              pattern={REGEXP_ONLY_DIGITS}
               autoFocus
-              placeholder="000000"
-              className="w-full border border-hairline bg-surface px-3 py-2 font-mono text-[18px] tracking-[0.4em] text-ink placeholder:text-muted"
-            />
+              disabled={pending}
+              containerClassName="w-full"
+              // Six digits is the whole form. Making somebody move to a button
+              // after the last one is a step the code itself already signalled
+              // was the end.
+              onComplete={() => formRef.current?.requestSubmit()}
+            >
+              <InputOTPGroup className="w-full">
+                {Array.from({ length: CODE_LENGTH }, (_, index) => (
+                  <InputOTPSlot key={index} index={index} />
+                ))}
+              </InputOTPGroup>
+            </InputOTP>
           </div>
         ) : null}
 

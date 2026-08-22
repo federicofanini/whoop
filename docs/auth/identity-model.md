@@ -138,4 +138,19 @@ Google was the only way in before this migration, so every existing profile got
 here through it. Dating the link from the row's own creation keeps "linked with
 Google" true for members who signed in before the column existed.
 
-Apply with `bun run db:push`, or by running the SQL directly.
+Apply with:
+
+```bash
+bun run db:migrate --dry   # list what would run
+bun run db:migrate         # apply it
+```
+
+The runner (`scripts/migrate.ts`) executes each file in `drizzle/` once, in
+order, inside a transaction, and records it in a `_migrations` table — so
+running it twice is a no-op.
+
+`bun run db:push` also works and is what the README documents, but it diffs the
+schema against the live database and decides for itself what to do about the
+difference. That is convenient on a scratch database and unnerving on one with
+data in it, because "the column is gone from the schema" and "the column should
+be dropped" look identical to a diff.

@@ -2,6 +2,7 @@ import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "@/core/db";
 import { escapeHtml, sendMessage } from "@/core/telegram/bot";
+import { CODE_LENGTH, normalizeCode } from "./code";
 
 /**
  * Six digits, delivered over Telegram, good for five minutes.
@@ -171,9 +172,6 @@ function constantTimeEquals(a: string, b: string): boolean {
   return timingSafeEqual(left, right);
 }
 
-/** Strips everything that is not a digit, so "123 456" and "123-456" both work. */
-export function normalizeCode(raw: string): string {
-  return raw.replace(/\D/g, "");
-}
-
-export const CODE_LENGTH = 6;
+// Re-exported so server callers have one import for everything about a code.
+// The definitions live in `code.ts`, which the browser can also reach.
+export { CODE_LENGTH, normalizeCode };
